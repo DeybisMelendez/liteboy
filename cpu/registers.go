@@ -10,6 +10,47 @@ type registers struct {
 	sp uint16 // Stack Pointer
 }
 
+// Memory Address
+func (cpu *CPU) getAddr(value uint16) *byte {
+	return &cpu.memory[value]
+}
+
+/*func (cpu *CPU) setAddr8(addr uint16) func(byte) {
+	return func(value byte) {
+		cpu.memory[addr] = value
+	}
+}*/
+
+func (cpu *CPU) setAddr16(addr uint16) func(uint16) {
+	return func(value uint16) {
+		cpu.memory[addr] = byte(value & 0xFF)
+		cpu.memory[addr+1] = byte(value >> 8)
+	}
+}
+
+func (cpu *CPU) getA16() uint16 {
+	lo := cpu.memory[cpu.regs.pc+1]
+	hi := cpu.memory[cpu.regs.pc+2]
+	return uint16(hi)<<8 | uint16(lo)
+}
+
+// e8
+func (cpu *CPU) getE8() int8 {
+	return int8(cpu.memory[cpu.regs.pc+1])
+}
+
+// n8
+func (cpu *CPU) getN8() byte {
+	return cpu.memory[cpu.regs.pc+1]
+}
+
+// n16
+func (cpu *CPU) getN16() uint16 {
+	lo := cpu.memory[cpu.regs.pc]
+	hi := cpu.memory[cpu.regs.pc+1]
+	return uint16(hi)<<8 | uint16(lo)
+}
+
 // AF combinado
 func (cpu *CPU) getAF() uint16 {
 	return uint16(cpu.regs.a)<<8 | uint16(cpu.regs.f&0xF0) // Solo los 4 bits superiores de F son válidos
