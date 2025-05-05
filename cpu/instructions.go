@@ -9,6 +9,10 @@ func (cpu *CPU) next(bytes uint16, cycles int) {
 	cpu.regs.pc += bytes
 }
 
+func (cpu *CPU) halt() {
+	cpu.halted = true
+}
+
 // INC 8 bits
 func (cpu *CPU) inc8(value *byte) {
 	result := *value + 1
@@ -168,4 +172,187 @@ func (cpu *CPU) add16(set func(uint16), a uint16, b uint16) {
 	} else {
 		cpu.regs.f &^= FlagC
 	}
+}
+
+// Add 8 bits
+func (cpu *CPU) add8(a *byte, b byte) {
+	result := *a + b
+	cpu.regs.f &^= FlagN // N = 0
+	if ((*a & 0x0F) + (b & 0x0F)) > 0x0F {
+		cpu.regs.f |= FlagH
+	} else {
+		cpu.regs.f &^= FlagH
+	}
+	if uint16(*a)+uint16(b) > 0xFF {
+		cpu.regs.f |= FlagC
+	} else {
+		cpu.regs.f &^= FlagC
+	}
+	*a = result
+	if result == 0 {
+		cpu.regs.f |= FlagZ
+	} else {
+		cpu.regs.f &^= FlagZ
+	}
+}
+
+// Resta 8 Bits
+func (cpu *CPU) sub8(a *byte, b byte) {
+	cpu.regs.f |= FlagN // N = 1
+	if (*a & 0x0F) < (b & 0x0F) {
+		cpu.regs.f |= FlagH
+	} else {
+		cpu.regs.f &^= FlagH
+	}
+	if *a < b {
+		cpu.regs.f |= FlagC
+	} else {
+		cpu.regs.f &^= FlagC
+	}
+	result := *a - b
+	*a = result
+	if result == 0 {
+		cpu.regs.f |= FlagZ
+	} else {
+		cpu.regs.f &^= FlagZ
+	}
+}
+
+// SBC Sub with carry 8 bits
+func (cpu *CPU) sbc8(a *byte, b byte) {
+	carry := byte(0)
+	if cpu.regs.f&FlagC != 0 {
+		carry = 1
+	}
+	cpu.regs.f |= FlagN // N = 1
+	if (*a & 0x0F) < ((b & 0x0F) + carry) {
+		cpu.regs.f |= FlagH
+	} else {
+		cpu.regs.f &^= FlagH
+	}
+	if uint16(*a) < uint16(b)+uint16(carry) {
+		cpu.regs.f |= FlagC
+	} else {
+		cpu.regs.f &^= FlagC
+	}
+	result := *a - b - carry
+	*a = result
+	if result == 0 {
+		cpu.regs.f |= FlagZ
+	} else {
+		cpu.regs.f &^= FlagZ
+	}
+}
+
+// ADC Add with carry 8 bits
+func (cpu *CPU) adc8(a *byte, b byte) {
+	carry := byte(0)
+	if cpu.regs.f&FlagC != 0 {
+		carry = 1
+	}
+	sum := uint16(*a) + uint16(b) + uint16(carry)
+	cpu.regs.f &^= FlagN // N = 0
+
+	if ((*a & 0x0F) + (b & 0x0F) + carry) > 0x0F {
+		cpu.regs.f |= FlagH
+	} else {
+		cpu.regs.f &^= FlagH
+	}
+	if sum > 0xFF {
+		cpu.regs.f |= FlagC
+	} else {
+		cpu.regs.f &^= FlagC
+	}
+
+	*a = byte(sum)
+	if *a == 0 {
+		cpu.regs.f |= FlagZ
+	} else {
+		cpu.regs.f &^= FlagZ
+	}
+}
+
+// Or 8 bits
+func (cpu *CPU) or8(a *byte, b byte) {
+	*a |= b
+	cpu.regs.f = 0
+	if *a == 0 {
+		cpu.regs.f |= FlagZ
+	}
+}
+
+// Xor 8 bits
+func (cpu *CPU) xor8(a *byte, b byte) {
+	*a ^= b
+	cpu.regs.f = 0
+	if *a == 0 {
+		cpu.regs.f |= FlagZ
+	}
+}
+
+// cp Compare 8 bits
+func (cpu *CPU) cp8(a byte, b byte) {
+	cpu.regs.f |= FlagN // N = 1
+	if (a & 0x0F) < (b & 0x0F) {
+		cpu.regs.f |= FlagH
+	} else {
+		cpu.regs.f &^= FlagH
+	}
+	if a < b {
+		cpu.regs.f |= FlagC
+	} else {
+		cpu.regs.f &^= FlagC
+	}
+	if a == b {
+		cpu.regs.f |= FlagZ
+	} else {
+		cpu.regs.f &^= FlagZ
+	}
+}
+func (cpu *CPU) and8(a *byte, b byte) {
+	*a &= b
+	cpu.regs.f = 0
+	if *a == 0 {
+		cpu.regs.f |= FlagZ
+	}
+	cpu.regs.f |= FlagH // H siempre se activa en AND
+}
+
+// ret return from subroutine
+func (cpu *CPU) ret() {
+	lo := cpu.memory[cpu.regs.sp]
+	hi := cpu.memory[cpu.regs.sp+1]
+	cpu.regs.sp += 2
+	cpu.regs.pc = uint16(hi)<<8 | uint16(lo)
+}
+
+func (cpu *CPU) pop16(set func(uint16)) {
+	lo := cpu.memory[cpu.regs.sp]
+	hi := cpu.memory[cpu.regs.sp+1]
+	cpu.regs.sp += 2
+	value := uint16(hi)<<8 | uint16(lo)
+	set(value)
+}
+func (cpu *CPU) call16(addr uint16) {
+	cpu.regs.sp -= 2
+	cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
+	cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
+	cpu.regs.pc = addr
+}
+func (cpu *CPU) push16(value uint16) {
+	cpu.regs.sp -= 2
+	cpu.memory[cpu.regs.sp] = byte(value & 0xFF)
+	cpu.memory[cpu.regs.sp+1] = byte(value >> 8)
+}
+
+// reset, jump to fixed address
+func (cpu *CPU) rst16(addr uint16) {
+	cpu.regs.sp -= 2
+	cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
+	cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
+	cpu.regs.pc = addr
+}
+func (cpu *CPU) ldh8(set *byte, value byte) {
+	addr := 0xFF00 + uint16(cpu.getN8())
+	cpu.ld8(cpu.getAddr(addr), value)
 }
