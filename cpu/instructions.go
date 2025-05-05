@@ -23,7 +23,7 @@ func (cpu *CPU) inc8(value *byte) {
 	} else {
 		cpu.regs.f &^= FlagH
 	}
-	*value++
+	*value = result
 }
 
 // INC 16 bits
@@ -45,12 +45,12 @@ func (cpu *CPU) dec8(value *byte) {
 	} else {
 		cpu.regs.f &^= FlagH
 	}
-	*value--
+	*value = result
 }
 
 // DEC 16 bits
 func (cpu *CPU) dec16(set func(uint16), value uint16) {
-	set(value + 1)
+	set(value - 1)
 }
 
 // RLCA
@@ -132,6 +132,16 @@ func (cpu *CPU) daa() {
 	if carry {
 		cpu.regs.f |= FlagC
 	}
+}
+
+// CCF (Complement Carry Flag)
+func (cpu *CPU) ccf() {
+	if cpu.regs.f&FlagC != 0 {
+		cpu.regs.f &^= FlagC
+	} else {
+		cpu.regs.f |= FlagC
+	}
+	cpu.regs.f &^= FlagN | FlagH
 }
 
 // Load Data 8 bits

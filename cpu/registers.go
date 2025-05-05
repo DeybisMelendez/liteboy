@@ -46,8 +46,8 @@ func (cpu *CPU) getN8() byte {
 
 // n16
 func (cpu *CPU) getN16() uint16 {
-	lo := cpu.memory[cpu.regs.pc]
-	hi := cpu.memory[cpu.regs.pc+1]
+	lo := cpu.memory[cpu.regs.pc+1]
+	hi := cpu.memory[cpu.regs.pc+2]
 	return uint16(hi)<<8 | uint16(lo)
 }
 

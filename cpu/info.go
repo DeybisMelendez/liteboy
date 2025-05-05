@@ -1,8 +1,8 @@
 package cpu
 
 const (
-	FlagZ byte = 0x80 // Zero
-	FlagN byte = 0x40 // Subtract
-	FlagH byte = 0x20 // Half Carry
-	FlagC byte = 0x10 // Carry
+	FlagZ byte = 1 << 7 // Zero
+	FlagN byte = 1 << 6 // Subtract
+	FlagH byte = 1 << 5 // Half Carry
+	FlagC byte = 1 << 4 // Carry
 )

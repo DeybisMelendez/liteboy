@@ -4,9 +4,8 @@ import "fmt"
 
 // Representa la CPU del Game Boy DMG
 type CPU struct {
-	regs registers
-
-	memory [0x10000]byte // Memoria de 64 KB
+	regs   registers
+	memory []byte
 	cycles int
 }
 
@@ -19,7 +18,11 @@ func NewCPU() *CPU {
 	return cpu
 }
 
-func (cpu *CPU) step() {
+func (cpu *CPU) LoadMemory(memory *[]byte) {
+	cpu.memory = *memory
+}
+
+func (cpu *CPU) Step() {
 	opcode := cpu.memory[cpu.regs.pc]
 	fmt.Printf("PC: %04X  Opcode: %02X\n", cpu.regs.pc, opcode)
 	//cpu.regs.pc++
@@ -49,7 +52,7 @@ func (cpu *CPU) step() {
 		cpu.next(1, 1)
 
 	case 0x06: // LD B,n8
-		cpu.ld8(&cpu.regs.b, cpu.memory[cpu.regs.pc+1])
+		cpu.ld8(&cpu.regs.b, cpu.getN8())
 		cpu.next(2, 2)
 	case 0x07: // RLCA
 		cpu.rlca(&cpu.regs.a)
@@ -80,7 +83,7 @@ func (cpu *CPU) step() {
 		cpu.next(1, 1)
 
 	case 0x0E: // LD C,n8
-		cpu.ld8(&cpu.regs.c, cpu.memory[cpu.regs.pc+1])
+		cpu.ld8(&cpu.regs.c, cpu.getN8())
 		cpu.next(2, 2)
 
 	case 0x0F: // RRCA
@@ -113,8 +116,8 @@ func (cpu *CPU) step() {
 		cpu.dec8(&cpu.regs.d)
 		cpu.next(1, 1)
 
-	case 0x16: // LD D,d8
-		cpu.ld8(&cpu.regs.d, cpu.memory[cpu.regs.pc+1])
+	case 0x16: // LD D,n8
+		cpu.ld8(&cpu.regs.d, cpu.getN8())
 		cpu.next(2, 2)
 
 	case 0x17: // RLA
@@ -122,8 +125,8 @@ func (cpu *CPU) step() {
 		cpu.next(1, 1)
 
 	case 0x18: // JR e8
-		offset := int8(cpu.memory[cpu.regs.pc+1])
-		cpu.regs.pc += uint16(2 + offset)
+		offset := cpu.getE8()
+		cpu.regs.pc = uint16(int(cpu.regs.pc) + 2 + int(offset))
 		cpu.cycles += 3
 
 	case 0x19: // ADD HL,DE
@@ -154,9 +157,9 @@ func (cpu *CPU) step() {
 		cpu.rra()
 		cpu.next(1, 1)
 	case 0x20: // JR NZ,e8
-		offset := int8(cpu.memory[cpu.regs.pc+1])
+		offset := cpu.getE8()
 		if cpu.regs.f&FlagZ == 0 {
-			cpu.regs.pc += uint16(int16(offset)) + 2
+			cpu.regs.pc = uint16(int(cpu.regs.pc) + 2 + int(offset))
 			cpu.cycles += 3
 		} else {
 			cpu.next(2, 2)
@@ -195,7 +198,8 @@ func (cpu *CPU) step() {
 	case 0x28: // JR Z,e8
 		offset := cpu.getE8()
 		if cpu.regs.f&FlagZ != 0 {
-			cpu.next(uint16(int16(offset))+2, 3)
+			cpu.regs.pc = uint16(int(cpu.regs.pc) + 2 + int(offset))
+			cpu.cycles += 3
 		} else {
 			cpu.next(2, 2)
 		}
@@ -232,10 +236,9 @@ func (cpu *CPU) step() {
 		cpu.next(1, 1)
 	case 0x30: // JR NC, e8
 		offset := cpu.getE8()
-		cpu.regs.pc++
 		if cpu.regs.f&FlagC == 0 {
-			cpu.regs.pc = uint16(int32(cpu.regs.pc) + int32(offset))
-			cpu.next(3, 1)
+			cpu.regs.pc = uint16(int(cpu.regs.pc) + 2 + int(offset))
+			cpu.cycles += 1
 		} else {
 			cpu.next(2, 1)
 		}
@@ -255,31 +258,11 @@ func (cpu *CPU) step() {
 		cpu.next(2, 2)
 
 	case 0x34: // INC (HL)
-		val := cpu.getHL()
-		cpu.inc16(cpu.setHL, val)
-		result := cpu.getHL()
-		cpu.regs.f &^= FlagZ | FlagN | FlagH
-		if result == 0 {
-			cpu.regs.f |= FlagZ
-		}
-		if (val & 0x0F) == 0x0F {
-			cpu.regs.f |= FlagH
-		}
+		cpu.inc8(&cpu.memory[cpu.getHL()])
 		cpu.next(3, 3)
 
 	case 0x35: // DEC (HL)
-		val := cpu.getHL()
-		cpu.dec16(cpu.setHL, val)
-		result := cpu.getHL()
-
-		cpu.regs.f &^= FlagZ | FlagH
-		cpu.regs.f |= FlagN
-		if result == 0 {
-			cpu.regs.f |= FlagZ
-		}
-		if (val & 0x0F) == 0x00 {
-			cpu.regs.f |= FlagH
-		}
+		cpu.dec8(&cpu.memory[cpu.getHL()])
 		cpu.next(3, 3)
 
 	case 0x36: // LD (HL), n8
@@ -294,7 +277,8 @@ func (cpu *CPU) step() {
 	case 0x38: // JR C, e8
 		offset := cpu.getE8()
 		if cpu.regs.f&FlagC != 0 {
-			cpu.next(uint16(int32(cpu.regs.pc+2)+int32(offset)), 3)
+			cpu.regs.pc = uint16(int(cpu.regs.pc) + 2 + int(offset))
+			cpu.cycles += 3
 		} else {
 			cpu.next(2, 2)
 		}
@@ -325,14 +309,12 @@ func (cpu *CPU) step() {
 		cpu.ld8(&cpu.regs.a, cpu.getN8())
 		cpu.next(2, 2)
 
-	case 0x3F: // CCF (Complement Carry Flag)
-		if cpu.regs.f&FlagC != 0 {
-			cpu.regs.f &^= FlagC
-		} else {
-			cpu.regs.f |= FlagC
-		}
-		cpu.regs.f &^= FlagN | FlagH
+	case 0x3F: // CCF
+		cpu.ccf()
 		cpu.next(1, 1)
+	case 0xC3: // JP a16
+		cpu.regs.pc = cpu.getA16()
+		cpu.cycles += 3
 	default:
 		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
 		panic("Detenido")

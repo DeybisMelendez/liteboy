@@ -33,6 +33,10 @@ func NewCartridge(path string) *Cartridge {
 	return cart
 }
 
+func (cartridge *Cartridge) GetROM() *[]byte {
+	return &cartridge.rom
+}
+
 func (cartridge *Cartridge) load(path string) {
 	rom, err := os.ReadFile(path)
 	if err != nil {
