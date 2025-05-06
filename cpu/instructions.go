@@ -352,7 +352,7 @@ func (cpu *CPU) rst16(addr uint16) {
 	cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 	cpu.regs.pc = addr
 }
-func (cpu *CPU) ldh8(set *byte, value byte) {
+func (cpu *CPU) ldh8(value byte) {
 	addr := 0xFF00 + uint16(cpu.getN8())
 	cpu.ld8(cpu.getAddr(addr), value)
 }

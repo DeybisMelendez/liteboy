@@ -779,6 +779,190 @@ func (cpu *CPU) Step() {
 	case 0xCF: // RST 08H
 		cpu.rst16(0x08)
 		cpu.next(1, 4)
+	case 0xD0: // RET NC
+		if cpu.regs.f&FlagC == 0 {
+			cpu.ret()
+			cpu.next(1, 5)
+		} else {
+			cpu.next(1, 2)
+		}
+
+	case 0xD1: // POP DE
+		cpu.pop16(cpu.setDE)
+		cpu.next(1, 3)
+
+	case 0xD2: // JP NC, a16
+		if cpu.regs.f&FlagC == 0 {
+			cpu.regs.pc = cpu.getA16()
+			cpu.next(3, 4)
+		} else {
+			cpu.next(3, 3)
+		}
+
+	case 0xD4: // CALL NC, a16
+		if cpu.regs.f&FlagC == 0 {
+			cpu.call16(cpu.getA16())
+			cpu.next(3, 6)
+		} else {
+			cpu.next(3, 3)
+		}
+
+	case 0xD5: // PUSH DE
+		cpu.push16(cpu.getDE())
+		cpu.next(1, 4)
+
+	case 0xD6: // SUB n8
+		cpu.sub8(&cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xD7: // RST 10H
+		cpu.rst16(0x10)
+		cpu.next(1, 4)
+
+	case 0xD8: // RET C
+		if cpu.regs.f&FlagC != 0 {
+			cpu.ret()
+			cpu.next(1, 5)
+		} else {
+			cpu.next(1, 2)
+		}
+
+	case 0xD9: // RETI
+		cpu.ret()
+		// TODO: Habilitar interrputs en RETI
+		cpu.next(1, 4)
+
+	case 0xDA: // JP C, a16
+		if cpu.regs.f&FlagC != 0 {
+			cpu.regs.pc = cpu.getA16()
+			cpu.next(3, 4)
+		} else {
+			cpu.next(3, 3)
+		}
+
+	case 0xDC: // CALL C, a16
+		if cpu.regs.f&FlagC != 0 {
+			cpu.call16(cpu.getA16())
+			cpu.next(1, 6)
+		} else {
+			cpu.next(3, 3)
+		}
+
+	case 0xDE: // SBC A, n8
+		cpu.sbc8(&cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xDF: // RST 18H
+		cpu.rst16(0x18)
+		cpu.next(1, 4)
+	case 0xE0: // LDH (n), A
+		addr := 0xFF00 + uint16(cpu.getN8())
+		*cpu.getAddr(addr) = cpu.regs.a
+		cpu.next(2, 3)
+
+	case 0xE1: // POP HL
+		cpu.pop16(cpu.setHL)
+		cpu.next(1, 3)
+
+	case 0xE2: // LDH (C), A
+		addr := 0xFF00 + uint16(cpu.regs.c)
+		*cpu.getAddr(addr) = cpu.regs.a
+		cpu.next(1, 2)
+
+	case 0xE5: // PUSH HL
+		cpu.push16(cpu.getHL())
+		cpu.next(1, 16)
+
+	case 0xE6: // AND A,n8
+		cpu.add8(&cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xE8: // ADD SP, e8
+		e8 := int16(cpu.getE8())
+		sp := int16(cpu.regs.sp)
+		result := sp + e8
+		cpu.regs.f = 0
+		if ((sp ^ e8 ^ result) & 0x10) != 0 {
+			cpu.regs.f |= FlagH
+		}
+		if ((sp ^ e8 ^ result) & 0x100) != 0 {
+			cpu.regs.f |= FlagC
+		}
+		cpu.regs.sp = uint16(result)
+		cpu.next(2, 4)
+
+	case 0xE9: // JP HL
+		cpu.regs.pc = cpu.getHL()
+
+	case 0xEA: // LD (a16), A
+		*cpu.getAddr(cpu.getA16()) = cpu.regs.a
+		cpu.next(3, 16)
+
+	case 0xEE: // XOR A, n8
+		cpu.xor8(&cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xF0: // LDH A, (a8)
+		cpu.regs.a = *cpu.getAddr(0xFF00 + uint16(cpu.getN8()))
+		cpu.next(2, 3)
+
+	case 0xF1: // POP AF
+		cpu.pop16(cpu.setAF)
+		cpu.next(1, 3)
+
+	case 0xF2: // LDH A, (C)
+		addr := 0xFF00 + uint16(cpu.regs.c)
+		cpu.regs.a = *cpu.getAddr(addr)
+		cpu.next(1, 2)
+
+	case 0xF3: // DI
+		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
+		// TODO: Implementar DI
+		cpu.next(1, 1)
+
+	case 0xF5: // PUSH AF
+		cpu.push16(cpu.getAF())
+		cpu.next(1, 4)
+
+	case 0xF6: // OR A, n8
+		cpu.or8(&cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xF8: // LD HL, SP+e8
+		e8 := int16(cpu.getE8())
+		sp := int16(cpu.regs.sp)
+		result := sp + e8
+		cpu.setHL(uint16(result))
+		cpu.regs.f = 0
+		if ((sp ^ e8 ^ result) & 0x10) != 0 {
+			cpu.regs.f |= FlagH
+		}
+		if ((sp ^ e8 ^ result) & 0x100) != 0 {
+			cpu.regs.f |= FlagC
+		}
+		cpu.next(2, 3)
+
+	case 0xF9: // LD SP, HL
+		cpu.regs.sp = cpu.getHL()
+		cpu.next(1, 2)
+
+	case 0xFA: // LD A, (a16)
+		cpu.regs.a = *cpu.getAddr(cpu.getA16())
+		cpu.next(3, 4)
+
+	case 0xFB: // EI
+		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
+		// TODO: Implementar EI
+		cpu.next(1, 1)
+
+	case 0xFE: // CP A, n8
+		cpu.cp8(cpu.regs.a, cpu.getN8())
+		cpu.next(2, 2)
+
+	case 0xFF: // RST 38H
+		cpu.rst16(0x0038)
+		cpu.next(1, 4)
+
 	default:
 		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
 		panic("Detenido")
