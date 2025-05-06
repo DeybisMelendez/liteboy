@@ -4,9 +4,15 @@ import "fmt"
 
 func (cpu *CPU) Step() {
 	opcode := cpu.memory[cpu.regs.pc]
-	fmt.Printf("PC: %04X  Opcode: %02X\n", cpu.regs.pc, opcode)
+	fmt.Println("---")
+	fmt.Printf("Opcode: %02X\n", opcode)
+	fmt.Printf("Registers: pc: %04X sp: %04X\n", cpu.regs.pc, cpu.regs.sp)
+	fmt.Printf("Registers: a: %04X b: %04X c: %04X d: %04X\n", cpu.regs.a, cpu.regs.b, cpu.regs.c, cpu.regs.d)
+	fmt.Printf("Registers: e: %04X f: %04X h: %04X l: %04X\n", cpu.regs.e, cpu.regs.f, cpu.regs.h, cpu.regs.l)
+
 	if cpu.halted {
 		// TODO: agregar CheckInterrupts() para cambiar halted a false
+		fmt.Println("CPU Halted")
 		cpu.cycles++
 		return
 	}
@@ -148,7 +154,7 @@ func (cpu *CPU) Step() {
 			cpu.next(2, 2)
 		}
 
-	case 0x21: // LD HL,n16
+	case 0x21: // LD HL, n16
 		cpu.ld16(cpu.setHL, cpu.getN16())
 		cpu.next(3, 3)
 
@@ -706,14 +712,14 @@ func (cpu *CPU) Step() {
 	case 0xC2: // JP NZ, a16
 		if cpu.regs.f&FlagZ == 0 {
 			cpu.regs.pc = cpu.getA16()
-			cpu.next(3, 4)
+			cpu.cycles += 4
 		} else {
 			cpu.next(3, 3)
 		}
 
 	case 0xC3: // JP a16
 		cpu.regs.pc = cpu.getA16()
-		cpu.next(3, 4)
+		cpu.cycles += 4
 
 	case 0xC4: // CALL NZ, a16
 		if cpu.regs.f&FlagZ == 0 {
@@ -749,7 +755,7 @@ func (cpu *CPU) Step() {
 	case 0xCA: // JP Z, a16
 		if cpu.regs.f&FlagZ != 0 {
 			cpu.regs.pc = cpu.getA16()
-			cpu.next(3, 4)
+			cpu.cycles += 4
 		} else {
 			cpu.next(3, 3)
 		}
@@ -794,7 +800,7 @@ func (cpu *CPU) Step() {
 	case 0xD2: // JP NC, a16
 		if cpu.regs.f&FlagC == 0 {
 			cpu.regs.pc = cpu.getA16()
-			cpu.next(3, 4)
+			cpu.cycles += 4
 		} else {
 			cpu.next(3, 3)
 		}
@@ -835,7 +841,7 @@ func (cpu *CPU) Step() {
 	case 0xDA: // JP C, a16
 		if cpu.regs.f&FlagC != 0 {
 			cpu.regs.pc = cpu.getA16()
-			cpu.next(3, 4)
+			cpu.cycles += 4
 		} else {
 			cpu.next(3, 3)
 		}
@@ -893,6 +899,7 @@ func (cpu *CPU) Step() {
 
 	case 0xE9: // JP HL
 		cpu.regs.pc = cpu.getHL()
+		cpu.cycles++
 
 	case 0xEA: // LD (a16), A
 		*cpu.getAddr(cpu.getA16()) = cpu.regs.a
