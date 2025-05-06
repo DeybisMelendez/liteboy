@@ -320,36 +320,36 @@ func (cpu *CPU) and8(a *byte, b byte) {
 
 // ret return from subroutine
 func (cpu *CPU) ret() {
-	lo := cpu.memory[cpu.regs.sp]
-	hi := cpu.memory[cpu.regs.sp+1]
+	lo := cpu.bus.Read(cpu.regs.sp)     //cpu.memory[cpu.regs.sp]
+	hi := cpu.bus.Read(cpu.regs.sp + 1) //cpu.memory[cpu.regs.sp+1]
 	cpu.regs.sp += 2
 	cpu.regs.pc = uint16(hi)<<8 | uint16(lo)
 }
 
 func (cpu *CPU) pop16(set func(uint16)) {
-	lo := cpu.memory[cpu.regs.sp]
-	hi := cpu.memory[cpu.regs.sp+1]
+	lo := cpu.bus.Read(cpu.regs.sp)     //cpu.memory[cpu.regs.sp]
+	hi := cpu.bus.Read(cpu.regs.sp + 1) //cpu.memory[cpu.regs.sp+1]
 	cpu.regs.sp += 2
 	value := uint16(hi)<<8 | uint16(lo)
 	set(value)
 }
 func (cpu *CPU) call16(addr uint16) {
 	cpu.regs.sp -= 2
-	cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
-	cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
+	cpu.bus.Write(cpu.regs.sp, byte(cpu.regs.pc&0xFF)) //cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
+	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 	cpu.regs.pc = addr
 }
 func (cpu *CPU) push16(value uint16) {
 	cpu.regs.sp -= 2
-	cpu.memory[cpu.regs.sp] = byte(value & 0xFF)
-	cpu.memory[cpu.regs.sp+1] = byte(value >> 8)
+	cpu.bus.Write(cpu.regs.sp, byte(cpu.regs.pc&0xFF)) //cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
+	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 }
 
 // reset, jump to fixed address
 func (cpu *CPU) rst16(addr uint16) {
 	cpu.regs.sp -= 2
-	cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
-	cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
+	cpu.bus.Write(cpu.regs.sp, byte(cpu.regs.pc&0xFF)) //cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
+	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 	cpu.regs.pc = addr
 }
 func (cpu *CPU) ldh8(value byte) {

@@ -1,19 +1,89 @@
 package main
 
 import (
-	"time"
+	"log"
+	"unsafe"
 
+	"github.com/deybismelendez/liteboy/bus.go"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
+	"github.com/deybismelendez/liteboy/ppu"
+	"github.com/veandco/go-sdl2/sdl"
+)
+
+const (
+	ScreenWidth  = 160
+	ScreenHeight = 144
+	Scale        = 4
 )
 
 func main() {
+	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
+		log.Fatalf("Error al iniciar SDL: %v", err)
+	}
+	defer sdl.Quit()
+
+	window, err := sdl.CreateWindow("LiteBoy", sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED,
+		ScreenWidth*Scale, ScreenHeight*Scale, sdl.WINDOW_SHOWN)
+	if err != nil {
+		log.Fatalf("Error al crear ventana: %v", err)
+	}
+	defer window.Destroy()
+
+	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	if err != nil {
+		log.Fatalf("Error al crear renderer: %v", err)
+	}
+	defer renderer.Destroy()
+
+	texture, err := renderer.CreateTexture(sdl.PIXELFORMAT_RGBA8888, sdl.TEXTUREACCESS_STREAMING,
+		ScreenWidth, ScreenHeight)
+	if err != nil {
+		log.Fatalf("Error al crear textura: %v", err)
+	}
+	defer texture.Destroy()
+
+	// Cargar ROM
 	cart := cartridge.NewCartridge("roms/tetris.gb")
-	cart.PrintHeaderInfo()
-	cpu := cpu.NewCPU()
-	cpu.LoadMemory(cart.GetROM())
-	for {
+	bus := bus.NewBus(cart.GetROM())
+	cpu := cpu.NewCPU(bus)
+	ppu := ppu.NewPPU(bus)
+
+	// Bucle principal
+	running := true
+	for running {
+		//start := time.Now()
+
+		// Emulación
 		cpu.Step()
-		time.Sleep(10 * time.Millisecond)
+		ppu.Step(20)
+
+		// Convertir framebuffer gris (0–255) a RGBA
+		frame := ppu.GetFrameBuffer()
+		pixels := make([]uint32, len(frame))
+		for i, c := range frame {
+			gray := uint32(c)
+			pixels[i] = (0xFF << 24) | (gray << 16) | (gray << 8) | gray // AARRGGBB
+		}
+
+		// Actualizar textura y dibujar
+		texture.Update(nil, unsafe.Pointer(&pixels[0]), ScreenWidth*4)
+		renderer.Clear()
+		renderer.Copy(texture, nil, nil)
+		renderer.Present()
+
+		// Control de FPS (~60 Hz)
+		/*elapsed := time.Since(start)
+		if elapsed < (time.Second / 60) {
+			time.Sleep((time.Second / 60) - elapsed)
+		}*/
+
+		// Eventos
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch event.(type) {
+			case *sdl.QuitEvent:
+				running = false
+			}
+		}
 	}
 }

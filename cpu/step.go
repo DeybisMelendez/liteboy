@@ -3,7 +3,7 @@ package cpu
 import "fmt"
 
 func (cpu *CPU) Step() {
-	opcode := cpu.memory[cpu.regs.pc]
+	opcode := cpu.bus.Read(cpu.regs.pc) //cpu.memory[cpu.regs.pc]
 	fmt.Println("---")
 	fmt.Printf("Opcode: %02X\n", opcode)
 	fmt.Printf("Registers: pc: %04X sp: %04X\n", cpu.regs.pc, cpu.regs.sp)
@@ -238,7 +238,7 @@ func (cpu *CPU) Step() {
 
 	case 0x32: // LD (HL-), A
 		addr := cpu.getHL()
-		cpu.ld8(&cpu.memory[addr], cpu.regs.a)
+		cpu.ld8(cpu.bus.GetAddress(addr), cpu.regs.a) //&cpu.memory[addr], cpu.regs.a)
 		cpu.setHL(addr - 1)
 		cpu.next(2, 2)
 
@@ -247,15 +247,15 @@ func (cpu *CPU) Step() {
 		cpu.next(2, 2)
 
 	case 0x34: // INC (HL)
-		cpu.inc8(&cpu.memory[cpu.getHL()])
+		cpu.inc8(cpu.bus.GetAddress(cpu.getHL())) //&cpu.memory[cpu.getHL()])
 		cpu.next(3, 3)
 
 	case 0x35: // DEC (HL)
-		cpu.dec8(&cpu.memory[cpu.getHL()])
+		cpu.dec8(cpu.bus.GetAddress(cpu.getHL())) //&cpu.memory[cpu.getHL()])
 		cpu.next(3, 3)
 
 	case 0x36: // LD (HL), n8
-		cpu.ld8(&cpu.memory[cpu.getHL()], cpu.getN8())
+		cpu.ld8(cpu.bus.GetAddress(cpu.getHL()), cpu.getN8()) //&cpu.memory[cpu.getHL()], cpu.getN8())
 		cpu.next(3, 3)
 
 	case 0x37: // SCF (Set Carry Flag)
@@ -450,28 +450,28 @@ func (cpu *CPU) Step() {
 		cpu.next(1, 1)
 
 	case 0x70: // LD (HL),B
-		cpu.memory[cpu.getHL()] = cpu.regs.b
+		cpu.bus.Write(cpu.getHL(), cpu.regs.b) //cpu.memory[cpu.getHL()] = cpu.regs.b
 		cpu.next(1, 2)
 	case 0x71: // LD (HL),C
-		cpu.memory[cpu.getHL()] = cpu.regs.c
+		cpu.bus.Write(cpu.getHL(), cpu.regs.c) //cpu.memory[cpu.getHL()] = cpu.regs.c
 		cpu.next(1, 2)
 	case 0x72: // LD (HL),D
-		cpu.memory[cpu.getHL()] = cpu.regs.d
+		cpu.bus.Write(cpu.getHL(), cpu.regs.d) //cpu.memory[cpu.getHL()] = cpu.regs.d
 		cpu.next(1, 2)
 	case 0x73: // LD (HL),E
-		cpu.memory[cpu.getHL()] = cpu.regs.e
+		cpu.bus.Write(cpu.getHL(), cpu.regs.e) //cpu.memory[cpu.getHL()] = cpu.regs.e
 		cpu.next(1, 2)
 	case 0x74: // LD (HL),H
-		cpu.memory[cpu.getHL()] = cpu.regs.h
+		cpu.bus.Write(cpu.getHL(), cpu.regs.h) //cpu.memory[cpu.getHL()] = cpu.regs.h
 		cpu.next(1, 2)
 	case 0x75: // LD (HL),L
-		cpu.memory[cpu.getHL()] = cpu.regs.l
+		cpu.bus.Write(cpu.getHL(), cpu.regs.l) //cpu.memory[cpu.getHL()] = cpu.regs.l
 		cpu.next(1, 2)
 	case 0x76: // HALT
 		cpu.halt()
 		cpu.next(1, 1)
 	case 0x77: // LD (HL),A
-		cpu.memory[cpu.getHL()] = cpu.regs.a
+		cpu.bus.Write(cpu.getHL(), cpu.regs.a) //cpu.memory[cpu.getHL()] = cpu.regs.a
 		cpu.next(1, 2)
 
 	case 0x78: // LD A,B

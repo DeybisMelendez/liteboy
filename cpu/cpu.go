@@ -1,30 +1,36 @@
 package cpu
 
-import "log"
+import (
+	"github.com/deybismelendez/liteboy/bus.go"
+)
 
 // Representa la CPU del Game Boy DMG
 type CPU struct {
 	regs   registers
-	memory []byte
 	cycles int
 	halted bool
+	bus    *bus.Bus
 }
 
 // Crea e inicializa una nueva CPU
-func NewCPU() *CPU {
+func NewCPU(bus *bus.Bus) *CPU {
 	cpu := &CPU{}
 	cpu.regs.a = 0x01
+	cpu.regs.f = 0x00
+	cpu.regs.b = 0xFF
+	cpu.regs.c = 0x13
+	cpu.regs.d = 0x00
+	cpu.regs.e = 0xC1
+	cpu.regs.h = 0x84
+	cpu.regs.l = 0x03
 	cpu.regs.pc = 0x0100
 	cpu.regs.sp = 0xFFFE
 	cpu.halted = false
-	cpu.memory = make([]byte, 0x10000) // 64 KB de espacio direccionable
+	//cpu.memory = make([]byte, 0x10000) // 64 KB de espacio direccionable
+	cpu.bus = bus
 	return cpu
 }
 
-func (cpu *CPU) LoadMemory(rom *[]byte) {
-	if len(*rom) < 0x8000 {
-		log.Fatalf("Error: la ROM es demasiado pequeña, se esperaban al menos 32KB, pero se recibieron %d bytes", len(*rom))
-	}
-	// Copiamos los primeros 32KB de la ROM en la memoria del CPU
-	copy(cpu.memory[:0x8000], (*rom)[:0x8000])
+func (cpu *CPU) GetCycles() int {
+	return cpu.cycles
 }
