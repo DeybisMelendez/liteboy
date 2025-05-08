@@ -27,34 +27,31 @@ func NewBus(rom *[]byte) *Bus {
 func (b *Bus) GetAddress(addr uint16) *byte {
 	switch {
 	case addr < 0x8000:
-		rom := *b.ROM
-		return &rom[addr]
+		return &(*b.ROM)[addr]
 
-	case addr >= 0x8000 && addr < 0xA000:
+	case addr < 0xA000:
 		return &b.VRAM[addr-0x8000]
 
-	case addr >= 0xA000 && addr < 0xC000:
+	case addr < 0xC000:
 		return &b.VRAM[addr-0xA000]
 
-	case addr >= 0xC000 && addr < 0xE000:
+	case addr < 0xE000:
 		return &b.WRAM[addr-0xC000]
 
-	case addr >= 0xFE00 && addr < 0xFEA0:
+	case addr < 0xFEA0:
 		return &b.OAM[addr-0xFE00]
 
-	case addr >= 0xFF00 && addr < 0xFF80:
+	case addr < 0xFF80:
 		return &b.IO[addr-0xFF00]
 
-	case addr >= 0xFF80 && addr < 0xFFFF:
+	case addr < 0xFFFF:
 		return &b.HRAM[addr-0xFF80]
 
 	case addr == 0xFFFF:
 		return &b.IE
 
 	default:
-		fmt.Printf("%02X ", addr)
-		panic("No implementado o fuera de rango")
-		// No implementado o fuera de rango
+		panic(fmt.Sprintf("Lectura fuera de rango: %04X", addr))
 	}
 }
 func (b *Bus) Read(addr uint16) byte {
@@ -63,31 +60,30 @@ func (b *Bus) Read(addr uint16) byte {
 		rom := *b.ROM
 		return rom[addr]
 
-	case addr >= 0x8000 && addr < 0xA000:
+	case addr < 0xA000:
 		return b.VRAM[addr-0x8000]
 
-	case addr >= 0xA000 && addr < 0xC000:
+	case addr < 0xC000:
 		return b.VRAM[addr-0xA000]
 
-	case addr >= 0xC000 && addr < 0xE000:
+	case addr < 0xE000:
 		return b.WRAM[addr-0xC000]
 
-	case addr >= 0xFE00 && addr < 0xFEA0:
+	case addr < 0xFEA0:
+		fmt.Println(addr)
 		return b.OAM[addr-0xFE00]
 
-	case addr >= 0xFF00 && addr < 0xFF80:
+	case addr < 0xFF80:
 		return b.IO[addr-0xFF00]
 
-	case addr >= 0xFF80 && addr < 0xFFFF:
+	case addr < 0xFFFF:
 		return b.HRAM[addr-0xFF80]
 
 	case addr == 0xFFFF:
 		return b.IE
 
 	default:
-		fmt.Printf("%02X ", addr)
-		panic("No implementado o fuera de rango")
-		// No implementado o fuera de rango
+		panic(fmt.Sprintf("Lectura fuera de rango: %04X", addr))
 	}
 }
 
@@ -98,27 +94,25 @@ func (b *Bus) Write(addr uint16, value byte) {
 		// TODO: En el futuro aquí iría MBC.
 		log.Printf("Intento de escritura en ROM en %04X: %02X", addr, value)
 
-	case addr >= 0x8000 && addr < 0xA000:
+	case addr < 0xA000:
 		b.VRAM[addr-0x8000] = value
 
-	case addr >= 0xA000 && addr < 0xC000:
+	case addr < 0xC000:
 		b.VRAM[addr-0xA000] = value
 
-	case addr >= 0xC000 && addr < 0xE000:
+	case addr < 0xE000:
 		b.WRAM[addr-0xC000] = value
 
-	case addr >= 0xFE00 && addr < 0xFEA0:
+	case addr < 0xFEA0:
 		b.OAM[addr-0xFE00] = value
 
-	case addr >= 0xFF00 && addr < 0xFF80:
+	case addr < 0xFF80:
 		b.IO[addr-0xFF00] = value
 
-	case addr >= 0xFF80 && addr < 0xFFFF:
+	case addr < 0xFFFF:
 		b.HRAM[addr-0xFF80] = value
 
 	default:
-		fmt.Printf("%02X ", addr)
-		panic("No implementado o fuera de rango")
-		// No implementado o fuera de rango
+		panic(fmt.Sprintf("Lectura fuera de rango: %04X", addr))
 	}
 }

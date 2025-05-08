@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/deybismelendez/liteboy/bus.go"
+	"github.com/deybismelendez/liteboy/bus"
 )
 
 // Representa la CPU del Game Boy DMG
@@ -26,7 +26,6 @@ func NewCPU(bus *bus.Bus) *CPU {
 	cpu.regs.pc = 0x0100
 	cpu.regs.sp = 0xFFFE
 	cpu.halted = false
-	//cpu.memory = make([]byte, 0x10000) // 64 KB de espacio direccionable
 	cpu.bus = bus
 	return cpu
 }

@@ -2,9 +2,10 @@ package main
 
 import (
 	"log"
+	"time"
 	"unsafe"
 
-	"github.com/deybismelendez/liteboy/bus.go"
+	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
@@ -15,6 +16,7 @@ const (
 	ScreenWidth  = 160
 	ScreenHeight = 144
 	Scale        = 4
+	TargetFPS    = 60
 )
 
 func main() {
@@ -44,41 +46,37 @@ func main() {
 	defer texture.Destroy()
 
 	// Cargar ROM
-	cart := cartridge.NewCartridge("roms/tetris.gb")
-	bus := bus.NewBus(cart.GetROM())
-	cpu := cpu.NewCPU(bus)
-	ppu := ppu.NewPPU(bus)
+	cart := cartridge.NewCartridge("roms/yakuman.gb")
+
+	// Inicializar componentes
+	gameBus := bus.NewBus(cart.GetROM())
+	gameCPU := cpu.NewCPU(gameBus)
+	gamePPU := ppu.NewPPU(gameBus)
 
 	// Bucle principal
 	running := true
 	for running {
-		//start := time.Now()
+		start := time.Now()
 
-		// Emulación
-		cpu.Step()
-		ppu.Step(20)
+		cycles := gameCPU.Step()
+		gamePPU.Step(cycles)
 
-		// Convertir framebuffer gris (0–255) a RGBA
-		frame := ppu.GetFrameBuffer()
-		pixels := make([]uint32, len(frame))
-		for i, c := range frame {
-			gray := uint32(c)
-			pixels[i] = (0xFF << 24) | (gray << 16) | (gray << 8) | gray // AARRGGBB
-		}
+		// Dibujar frame
 
-		// Actualizar textura y dibujar
-		texture.Update(nil, unsafe.Pointer(&pixels[0]), ScreenWidth*4)
+		frame := *gamePPU.GetFrameBuffer()
+		texture.Update(nil, unsafe.Pointer(&frame[0]), ScreenWidth*4)
 		renderer.Clear()
 		renderer.Copy(texture, nil, nil)
 		renderer.Present()
 
 		// Control de FPS (~60 Hz)
-		/*elapsed := time.Since(start)
-		if elapsed < (time.Second / 60) {
-			time.Sleep((time.Second / 60) - elapsed)
-		}*/
+		elapsed := time.Since(start)
+		frameDuration := time.Second / TargetFPS
+		if elapsed < frameDuration {
+			time.Sleep(frameDuration - elapsed)
+		}
 
-		// Eventos
+		// Manejo de eventos
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:

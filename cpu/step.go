@@ -2,19 +2,19 @@ package cpu
 
 import "fmt"
 
-func (cpu *CPU) Step() {
+func (cpu *CPU) Step() int {
 	opcode := cpu.bus.Read(cpu.regs.pc) //cpu.memory[cpu.regs.pc]
 	fmt.Println("---")
 	fmt.Printf("Opcode: %02X\n", opcode)
 	fmt.Printf("Registers: pc: %04X sp: %04X\n", cpu.regs.pc, cpu.regs.sp)
 	fmt.Printf("Registers: a: %04X b: %04X c: %04X d: %04X\n", cpu.regs.a, cpu.regs.b, cpu.regs.c, cpu.regs.d)
 	fmt.Printf("Registers: e: %04X f: %04X h: %04X l: %04X\n", cpu.regs.e, cpu.regs.f, cpu.regs.h, cpu.regs.l)
-
+	cycles := cpu.cycles
 	if cpu.halted {
 		// TODO: agregar CheckInterrupts() para cambiar halted a false
 		fmt.Println("CPU Halted")
 		cpu.cycles++
-		return
+		return cycles - cpu.cycles
 	}
 	switch opcode {
 	case 0x00: // NOP
@@ -25,7 +25,7 @@ func (cpu *CPU) Step() {
 		cpu.next(3, 3)
 
 	case 0x02: // LD (BC),A
-		cpu.ld8(cpu.getAddr(cpu.getBC()), cpu.regs.a)
+		cpu.ld8(cpu.bus.GetAddress(cpu.getBC()), cpu.regs.a)
 		cpu.next(1, 2)
 
 	case 0x03: // INC BC
@@ -974,4 +974,5 @@ func (cpu *CPU) Step() {
 		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
 		panic("Detenido")
 	}
+	return cycles - cpu.cycles
 }
