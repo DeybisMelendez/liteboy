@@ -46,7 +46,7 @@ func main() {
 	defer texture.Destroy()
 
 	// Cargar ROM
-	cart := cartridge.NewCartridge("roms/yakuman.gb")
+	cart := cartridge.NewCartridge("roms/tetris.gb")
 
 	// Inicializar componentes
 	gameBus := bus.NewBus(cart)

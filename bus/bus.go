@@ -30,37 +30,6 @@ func NewBus(cart *cartridge.Cartridge) *Bus {
 	}
 }
 
-func (b *Bus) GetAddress(addr uint16) *byte {
-	switch {
-	case addr < 0x4000:
-		return &(*b.ROM00)[addr]
-
-	case addr < 0xA000:
-		return &b.VRAM[addr-0x8000]
-
-	case addr < 0xC000:
-		return &b.VRAM[addr-0xA000]
-
-	case addr < 0xE000:
-		return &b.WRAM[addr-0xC000]
-
-	case addr < 0xFEA0:
-		return &b.OAM[addr-0xFE00]
-
-	case addr < 0xFF80:
-		return &b.IO[addr-0xFF00]
-
-	case addr < 0xFFFF:
-		return &b.HRAM[addr-0xFF80]
-
-	case addr == 0xFFFF:
-		return &b.IE
-
-	default:
-		panic(fmt.Sprintf("Lectura fuera de rango: %04X", addr))
-	}
-}
-
 func (b *Bus) Read(addr uint16) byte {
 	switch {
 	case addr < 0x4000:
