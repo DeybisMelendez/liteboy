@@ -49,7 +49,7 @@ func main() {
 	cart := cartridge.NewCartridge("roms/yakuman.gb")
 
 	// Inicializar componentes
-	gameBus := bus.NewBus(cart.GetROM())
+	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
 

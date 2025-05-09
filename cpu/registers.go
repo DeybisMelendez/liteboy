@@ -11,15 +11,10 @@ type registers struct {
 }
 
 // Memory Address
-func (cpu *CPU) getAddr(value uint16) *byte {
-	return cpu.bus.GetAddress(value) //&cpu.memory[value]
-}
 
-func (cpu *CPU) setAddr16(addr uint16) func(uint16) {
-	return func(value uint16) {
-		cpu.bus.Write(addr, byte(value&0xFF)) //cpu.memory[addr] = byte(value & 0xFF)
-		cpu.bus.Write(addr+1, byte(value>>8)) //cpu.memory[addr+1] = byte(value >> 8)
-	}
+func (cpu *CPU) setAddr16(addr uint16, value uint16) {
+	cpu.bus.Write(addr, byte(value&0xFF)) //cpu.memory[addr] = byte(value & 0xFF)
+	cpu.bus.Write(addr+1, byte(value>>8)) //cpu.memory[addr+1] = byte(value >> 8)
 }
 
 func (cpu *CPU) getA16() uint16 {

@@ -21,11 +21,11 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x01: // LD BC, n16
-		cpu.ld16(cpu.setBC, cpu.getN16())
+		cpu.setBC(cpu.getN16())
 		cpu.next(3, 3)
 
 	case 0x02: // LD (BC),A
-		cpu.ld8(cpu.bus.GetAddress(cpu.getBC()), cpu.regs.a)
+		cpu.bus.Write(cpu.getBC(), cpu.regs.a)
 		cpu.next(1, 2)
 
 	case 0x03: // INC BC
@@ -41,14 +41,14 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x06: // LD B,n8
-		cpu.ld8(&cpu.regs.b, cpu.getN8())
+		cpu.regs.b = cpu.getN8()
 		cpu.next(2, 2)
 	case 0x07: // RLCA
 		cpu.rlca(&cpu.regs.a)
 		cpu.next(1, 1)
 
 	case 0x08: // LD (a16),SP
-		cpu.ld16(cpu.setAddr16(cpu.getA16()), cpu.regs.sp)
+		cpu.setAddr16(cpu.getA16(), cpu.regs.sp)
 		cpu.next(3, 5)
 
 	case 0x09: // ADD HL,BC
@@ -56,7 +56,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 2)
 
 	case 0x0A: // LD A,(BC)
-		cpu.ld8(&cpu.regs.a, *cpu.getAddr(cpu.getBC()))
+		cpu.regs.a = cpu.bus.Read(cpu.getBC())
 		cpu.next(1, 2)
 
 	case 0x0B: // DEC BC
@@ -72,7 +72,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x0E: // LD C,n8
-		cpu.ld8(&cpu.regs.c, cpu.getN8())
+		cpu.regs.c = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x0F: // RRCA
@@ -90,7 +90,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(3, 3)
 
 	case 0x12: // LD (DE), A
-		cpu.ld8(cpu.getAddr(cpu.getDE()), cpu.regs.a)
+		cpu.bus.Write(cpu.getDE(), cpu.regs.a)
 		cpu.next(1, 2)
 
 	case 0x13: // INC DE
@@ -106,7 +106,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x16: // LD D,n8
-		cpu.ld8(&cpu.regs.d, cpu.getN8())
+		cpu.regs.d = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x17: // RLA
@@ -123,7 +123,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 2)
 
 	case 0x1A: // LD A,(DE)
-		cpu.ld8(&cpu.regs.a, *cpu.getAddr(cpu.getDE()))
+		cpu.regs.a = cpu.bus.Read(cpu.getDE())
 		cpu.next(1, 2)
 
 	case 0x1B: // DEC DE
@@ -139,7 +139,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x1E: // LD E,n8
-		cpu.ld8(&cpu.regs.e, cpu.getN8())
+		cpu.regs.e = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x1F: // RRA
@@ -160,7 +160,7 @@ func (cpu *CPU) Step() int {
 
 	case 0x22: // LD (HL+),A
 		hl := cpu.getHL()
-		cpu.ld8(cpu.getAddr(hl), cpu.regs.a)
+		cpu.bus.Write(cpu.getHL(), cpu.regs.a)
 		cpu.setHL(hl + 1)
 		cpu.next(1, 2)
 
@@ -177,7 +177,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x26: // LD H,n8
-		cpu.ld8(&cpu.regs.h, cpu.getN8())
+		cpu.regs.h = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x27: // DAA
@@ -199,7 +199,7 @@ func (cpu *CPU) Step() int {
 
 	case 0x2A: // LD A,(HL+)
 		hl := cpu.getHL()
-		cpu.ld8(&cpu.regs.a, *cpu.getAddr(hl))
+		cpu.regs.a = cpu.bus.Read(cpu.getHL())
 		cpu.setHL(hl + 1)
 		cpu.next(1, 2)
 
@@ -216,7 +216,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x2E: // LD L,n8
-		cpu.ld8(&cpu.regs.l, cpu.getN8())
+		cpu.regs.l = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x2F: // CPL (Complement A)
@@ -238,7 +238,7 @@ func (cpu *CPU) Step() int {
 
 	case 0x32: // LD (HL-), A
 		addr := cpu.getHL()
-		cpu.ld8(cpu.bus.GetAddress(addr), cpu.regs.a) //&cpu.memory[addr], cpu.regs.a)
+		cpu.bus.Write(cpu.getHL(), cpu.regs.a)
 		cpu.setHL(addr - 1)
 		cpu.next(2, 2)
 
@@ -255,7 +255,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(3, 3)
 
 	case 0x36: // LD (HL), n8
-		cpu.ld8(cpu.bus.GetAddress(cpu.getHL()), cpu.getN8()) //&cpu.memory[cpu.getHL()], cpu.getN8())
+		cpu.bus.Write(cpu.getHL(), cpu.getN8())
 		cpu.next(3, 3)
 
 	case 0x37: // SCF (Set Carry Flag)
@@ -278,7 +278,7 @@ func (cpu *CPU) Step() int {
 
 	case 0x3A: // LD A, (HL-)
 		hl := cpu.getHL()
-		cpu.ld8(&cpu.regs.a, *cpu.getAddr(hl))
+		cpu.regs.a = cpu.bus.Read(hl)
 		cpu.dec16(cpu.setHL, hl)
 		cpu.next(2, 2)
 
@@ -295,211 +295,218 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 1)
 
 	case 0x3E: // LD A, n8
-		cpu.ld8(&cpu.regs.a, cpu.getN8())
+		cpu.regs.a = cpu.getN8()
 		cpu.next(2, 2)
 
 	case 0x3F: // CCF
 		cpu.ccf()
 		cpu.next(1, 1)
 	case 0x40: // LD B,B
-		cpu.ld8(&cpu.regs.b, cpu.regs.b)
+		// redundancia
+		// cpu.regs.b = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x41: // LD B,C
-		cpu.ld8(&cpu.regs.b, cpu.regs.c)
+		cpu.regs.b = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x42: // LD B,D
-		cpu.ld8(&cpu.regs.b, cpu.regs.d)
+		cpu.regs.b = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x43: // LD B,E
-		cpu.ld8(&cpu.regs.b, cpu.regs.e)
+		cpu.regs.b = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x44: // LD B,H
-		cpu.ld8(&cpu.regs.b, cpu.regs.h)
+		cpu.regs.b = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x45: // LD B,L
-		cpu.ld8(&cpu.regs.b, cpu.regs.l)
+		cpu.regs.b = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x46: // LD B,(HL)
-		cpu.ld8(&cpu.regs.b, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.b = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x47: // LD B,A
-		cpu.ld8(&cpu.regs.b, cpu.regs.a)
+		cpu.regs.b = cpu.regs.a
 		cpu.next(1, 1)
 
 	case 0x48: // LD C,B
-		cpu.ld8(&cpu.regs.c, cpu.regs.b)
+		cpu.regs.c = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x49: // LD C,C
-		cpu.ld8(&cpu.regs.c, cpu.regs.c)
+		// redundancia
+		// cpu.regs.c = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x4A: // LD C,D
-		cpu.ld8(&cpu.regs.c, cpu.regs.d)
+		cpu.regs.c = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x4B: // LD C,E
-		cpu.ld8(&cpu.regs.c, cpu.regs.e)
+		cpu.regs.c = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x4C: // LD C,H
-		cpu.ld8(&cpu.regs.c, cpu.regs.h)
+		cpu.regs.c = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x4D: // LD C,L
-		cpu.ld8(&cpu.regs.c, cpu.regs.l)
+		cpu.regs.c = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x4E: // LD C,(HL)
-		cpu.ld8(&cpu.regs.c, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.c = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x4F: // LD C,A
-		cpu.ld8(&cpu.regs.c, cpu.regs.a)
+		cpu.regs.c = cpu.regs.a
 		cpu.next(1, 1)
 	case 0x50: // LD D,B
-		cpu.ld8(&cpu.regs.d, cpu.regs.b)
+		cpu.regs.d = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x51: // LD D,C
-		cpu.ld8(&cpu.regs.d, cpu.regs.c)
+		cpu.regs.d = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x52: // LD D,D
-		cpu.ld8(&cpu.regs.d, cpu.regs.d)
+		//redundancia
+		//cpu.regs.d = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x53: // LD D,E
-		cpu.ld8(&cpu.regs.d, cpu.regs.e)
+		cpu.regs.d = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x54: // LD D,H
-		cpu.ld8(&cpu.regs.d, cpu.regs.h)
+		cpu.regs.d = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x55: // LD D,L
-		cpu.ld8(&cpu.regs.d, cpu.regs.l)
+		cpu.regs.d = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x56: // LD D,(HL)
-		cpu.ld8(&cpu.regs.d, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.d = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x57: // LD D,A
-		cpu.ld8(&cpu.regs.d, cpu.regs.a)
+		cpu.regs.d = cpu.regs.a
 		cpu.next(1, 1)
 
 	case 0x58: // LD E,B
-		cpu.ld8(&cpu.regs.e, cpu.regs.b)
+		cpu.regs.e = cpu.regs.a
 		cpu.next(1, 1)
 	case 0x59: // LD E,C
-		cpu.ld8(&cpu.regs.e, cpu.regs.c)
+		cpu.regs.e = cpu.regs.a
 		cpu.next(1, 1)
 	case 0x5A: // LD E,D
-		cpu.ld8(&cpu.regs.e, cpu.regs.d)
+		cpu.regs.e = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x5B: // LD E,E
-		cpu.ld8(&cpu.regs.e, cpu.regs.e)
+		//redundancia
+		//cpu.regs.e = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x5C: // LD E,H
-		cpu.ld8(&cpu.regs.e, cpu.regs.h)
+		cpu.regs.e = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x5D: // LD E,L
-		cpu.ld8(&cpu.regs.e, cpu.regs.l)
+		cpu.regs.e = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x5E: // LD E,(HL)
-		cpu.ld8(&cpu.regs.e, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.e = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x5F: // LD E,A
-		cpu.ld8(&cpu.regs.e, cpu.regs.a)
+		cpu.regs.e = cpu.regs.a
 		cpu.next(1, 1)
 	case 0x60: // LD H,B
-		cpu.ld8(&cpu.regs.h, cpu.regs.b)
+		cpu.regs.h = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x61: // LD H,C
-		cpu.ld8(&cpu.regs.h, cpu.regs.c)
+		cpu.regs.h = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x62: // LD H,D
-		cpu.ld8(&cpu.regs.h, cpu.regs.d)
+		cpu.regs.h = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x63: // LD H,E
-		cpu.ld8(&cpu.regs.h, cpu.regs.e)
+		cpu.regs.h = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x64: // LD H,H
-		cpu.ld8(&cpu.regs.h, cpu.regs.h)
+		//redundancia
+		//cpu.regs.h = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x65: // LD H,L
-		cpu.ld8(&cpu.regs.h, cpu.regs.l)
+		cpu.regs.h = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x66: // LD H,(HL)
-		cpu.ld8(&cpu.regs.h, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.h = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x67: // LD H,A
-		cpu.ld8(&cpu.regs.h, cpu.regs.a)
+		cpu.regs.h = cpu.regs.a
 		cpu.next(1, 1)
 
 	case 0x68: // LD L,B
-		cpu.ld8(&cpu.regs.l, cpu.regs.b)
+		cpu.regs.l = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x69: // LD L,C
-		cpu.ld8(&cpu.regs.l, cpu.regs.c)
+		cpu.regs.l = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x6A: // LD L,D
-		cpu.ld8(&cpu.regs.l, cpu.regs.d)
+		cpu.regs.l = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x6B: // LD L,E
-		cpu.ld8(&cpu.regs.l, cpu.regs.e)
+		cpu.regs.l = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x6C: // LD L,H
-		cpu.ld8(&cpu.regs.l, cpu.regs.h)
+		cpu.regs.l = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x6D: // LD L,L
-		cpu.ld8(&cpu.regs.l, cpu.regs.l)
+		//redundancia
+		//cpu.regs.l = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x6E: // LD L,(HL)
-		cpu.ld8(&cpu.regs.l, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.l = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x6F: // LD L,A
-		cpu.ld8(&cpu.regs.l, cpu.regs.a)
+		cpu.regs.l = cpu.regs.a
 		cpu.next(1, 1)
 
 	case 0x70: // LD (HL),B
-		cpu.bus.Write(cpu.getHL(), cpu.regs.b) //cpu.memory[cpu.getHL()] = cpu.regs.b
+		cpu.bus.Write(cpu.getHL(), cpu.regs.b)
 		cpu.next(1, 2)
 	case 0x71: // LD (HL),C
-		cpu.bus.Write(cpu.getHL(), cpu.regs.c) //cpu.memory[cpu.getHL()] = cpu.regs.c
+		cpu.bus.Write(cpu.getHL(), cpu.regs.c)
 		cpu.next(1, 2)
 	case 0x72: // LD (HL),D
-		cpu.bus.Write(cpu.getHL(), cpu.regs.d) //cpu.memory[cpu.getHL()] = cpu.regs.d
+		cpu.bus.Write(cpu.getHL(), cpu.regs.d)
 		cpu.next(1, 2)
 	case 0x73: // LD (HL),E
-		cpu.bus.Write(cpu.getHL(), cpu.regs.e) //cpu.memory[cpu.getHL()] = cpu.regs.e
+		cpu.bus.Write(cpu.getHL(), cpu.regs.e)
 		cpu.next(1, 2)
 	case 0x74: // LD (HL),H
-		cpu.bus.Write(cpu.getHL(), cpu.regs.h) //cpu.memory[cpu.getHL()] = cpu.regs.h
+		cpu.bus.Write(cpu.getHL(), cpu.regs.h)
 		cpu.next(1, 2)
 	case 0x75: // LD (HL),L
-		cpu.bus.Write(cpu.getHL(), cpu.regs.l) //cpu.memory[cpu.getHL()] = cpu.regs.l
+		cpu.bus.Write(cpu.getHL(), cpu.regs.l)
 		cpu.next(1, 2)
 	case 0x76: // HALT
 		cpu.halt()
 		cpu.next(1, 1)
 	case 0x77: // LD (HL),A
-		cpu.bus.Write(cpu.getHL(), cpu.regs.a) //cpu.memory[cpu.getHL()] = cpu.regs.a
+		cpu.bus.Write(cpu.getHL(), cpu.regs.a)
 		cpu.next(1, 2)
 
 	case 0x78: // LD A,B
-		cpu.ld8(&cpu.regs.a, cpu.regs.b)
+		cpu.regs.a = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x79: // LD A,C
-		cpu.ld8(&cpu.regs.a, cpu.regs.c)
+		cpu.regs.a = cpu.regs.c
 		cpu.next(1, 1)
 	case 0x7A: // LD A,D
-		cpu.ld8(&cpu.regs.a, cpu.regs.d)
+		cpu.regs.a = cpu.regs.d
 		cpu.next(1, 1)
 	case 0x7B: // LD A,E
-		cpu.ld8(&cpu.regs.a, cpu.regs.e)
+		cpu.regs.a = cpu.regs.e
 		cpu.next(1, 1)
 	case 0x7C: // LD A,H
-		cpu.ld8(&cpu.regs.a, cpu.regs.h)
+		cpu.regs.a = cpu.regs.h
 		cpu.next(1, 1)
 	case 0x7D: // LD A,L
-		cpu.ld8(&cpu.regs.a, cpu.regs.l)
+		cpu.regs.a = cpu.regs.l
 		cpu.next(1, 1)
 	case 0x7E: // LD A,(HL)
-		cpu.ld8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.regs.a = cpu.bus.Read(cpu.getHL())
 		cpu.next(1, 2)
 	case 0x7F: // LD A,A
-		cpu.ld8(&cpu.regs.a, cpu.regs.a)
+		//redundancia
+		//cpu.regs.a = cpu.regs.a
 		cpu.next(1, 1)
 	case 0x80: // ADD A,B
-		cpu.add8(&cpu.regs.a, cpu.regs.b)
+		cpu.regs.a = cpu.regs.b
 		cpu.next(1, 1)
 	case 0x81: // ADD A,C
 		cpu.add8(&cpu.regs.a, cpu.regs.c)
@@ -517,7 +524,7 @@ func (cpu *CPU) Step() int {
 		cpu.add8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0x86: // ADD A,(HL)
-		cpu.add8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.add8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0x87: // ADD A,A
 		cpu.add8(&cpu.regs.a, cpu.regs.a)
@@ -542,7 +549,7 @@ func (cpu *CPU) Step() int {
 		cpu.adc8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0x8E: // ADC A,(HL)
-		cpu.adc8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.adc8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0x8F: // ADC A,A
 		cpu.adc8(&cpu.regs.a, cpu.regs.a)
@@ -567,7 +574,7 @@ func (cpu *CPU) Step() int {
 		cpu.sub8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0x96: // SUB A, (HL)
-		cpu.sub8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.sub8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0x97: // SUB A, A
 		cpu.sub8(&cpu.regs.a, cpu.regs.a)
@@ -592,7 +599,7 @@ func (cpu *CPU) Step() int {
 		cpu.sbc8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0x9E: // SBC A,(HL)
-		cpu.sbc8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.sbc8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0x9F: // SBC A,A
 		cpu.sbc8(&cpu.regs.a, cpu.regs.a)
@@ -617,7 +624,7 @@ func (cpu *CPU) Step() int {
 		cpu.and8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0xA6: // AND (HL)
-		cpu.and8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.and8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0xA7: // AND A
 		cpu.and8(&cpu.regs.a, cpu.regs.a)
@@ -642,7 +649,7 @@ func (cpu *CPU) Step() int {
 		cpu.xor8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0xAE: // XOR (HL)
-		cpu.xor8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.xor8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0xAF: // XOR A
 		cpu.xor8(&cpu.regs.a, cpu.regs.a)
@@ -667,7 +674,7 @@ func (cpu *CPU) Step() int {
 		cpu.or8(&cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0xB6: // OR (HL)
-		cpu.or8(&cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.or8(&cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0xB7: // OR A
 		cpu.or8(&cpu.regs.a, cpu.regs.a)
@@ -692,7 +699,7 @@ func (cpu *CPU) Step() int {
 		cpu.cp8(cpu.regs.a, cpu.regs.l)
 		cpu.next(1, 1)
 	case 0xBE: // CP (HL)
-		cpu.cp8(cpu.regs.a, *cpu.getAddr(cpu.getHL()))
+		cpu.cp8(cpu.regs.a, cpu.bus.Read(cpu.getHL()))
 		cpu.next(1, 2)
 	case 0xBF: // CP A
 		cpu.cp8(cpu.regs.a, cpu.regs.a)
@@ -862,8 +869,7 @@ func (cpu *CPU) Step() int {
 		cpu.rst16(0x18)
 		cpu.next(1, 4)
 	case 0xE0: // LDH (n), A
-		addr := 0xFF00 + uint16(cpu.getN8())
-		*cpu.getAddr(addr) = cpu.regs.a
+		cpu.bus.Write(0xFF00+uint16(cpu.getN8()), cpu.regs.a)
 		cpu.next(2, 3)
 
 	case 0xE1: // POP HL
@@ -871,8 +877,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 3)
 
 	case 0xE2: // LDH (C), A
-		addr := 0xFF00 + uint16(cpu.regs.c)
-		*cpu.getAddr(addr) = cpu.regs.a
+		cpu.bus.Write(0xFF00+uint16(cpu.regs.c), cpu.regs.a)
 		cpu.next(1, 2)
 
 	case 0xE5: // PUSH HL
@@ -902,15 +907,15 @@ func (cpu *CPU) Step() int {
 		cpu.cycles++
 
 	case 0xEA: // LD (a16), A
-		*cpu.getAddr(cpu.getA16()) = cpu.regs.a
+		cpu.bus.Write(cpu.getA16(), cpu.regs.a)
 		cpu.next(3, 16)
 
 	case 0xEE: // XOR A, n8
-		cpu.xor8(&cpu.regs.a, cpu.getN8())
+		cpu.xor8(&cpu.regs.a, cpu.getN8()) // TODO: revisar cpu.getA8()?
 		cpu.next(2, 2)
 
 	case 0xF0: // LDH A, (a8)
-		cpu.regs.a = *cpu.getAddr(0xFF00 + uint16(cpu.getN8()))
+		cpu.regs.a = cpu.bus.Read(0xFF00 + uint16(cpu.getN8())) // TODO: revisar cpu.getA8()?
 		cpu.next(2, 3)
 
 	case 0xF1: // POP AF
@@ -918,8 +923,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 3)
 
 	case 0xF2: // LDH A, (C)
-		addr := 0xFF00 + uint16(cpu.regs.c)
-		cpu.regs.a = *cpu.getAddr(addr)
+		cpu.regs.a = cpu.bus.Read(0xFF00 + uint16(cpu.regs.c))
 		cpu.next(1, 2)
 
 	case 0xF3: // DI
@@ -954,7 +958,7 @@ func (cpu *CPU) Step() int {
 		cpu.next(1, 2)
 
 	case 0xFA: // LD A, (a16)
-		cpu.regs.a = *cpu.getAddr(cpu.getA16())
+		cpu.regs.a = cpu.bus.Read(cpu.getA16())
 		cpu.next(3, 4)
 
 	case 0xFB: // EI

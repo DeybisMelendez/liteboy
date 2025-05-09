@@ -149,9 +149,9 @@ func (cpu *CPU) ccf() {
 }
 
 // Load Data 8 bits
-func (cpu *CPU) ld8(set *byte, value byte) {
-	*set = value
-}
+/*func (cpu *CPU) ld8(addr uint16, value byte) {
+	cpu.bus.Write(addr, value)
+}*/
 
 // Load Data 16 bits
 func (cpu *CPU) ld16(set func(uint16), value uint16) {
@@ -339,7 +339,7 @@ func (cpu *CPU) call16(addr uint16) {
 	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 	cpu.regs.pc = addr
 }
-func (cpu *CPU) push16(value uint16) {
+func (cpu *CPU) push16(value uint16) { // TODO: Arreglar push value no está siendo usado
 	cpu.regs.sp -= 2
 	cpu.bus.Write(cpu.regs.sp, byte(cpu.regs.pc&0xFF)) //cpu.memory[cpu.regs.sp] = byte(cpu.regs.pc & 0xFF)
 	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
@@ -352,7 +352,8 @@ func (cpu *CPU) rst16(addr uint16) {
 	cpu.bus.Write(cpu.regs.sp+1, byte(cpu.regs.pc>>8)) //cpu.memory[cpu.regs.sp+1] = byte(cpu.regs.pc >> 8)
 	cpu.regs.pc = addr
 }
-func (cpu *CPU) ldh8(value byte) {
+
+/*func (cpu *CPU) ldh8(value byte) {
 	addr := 0xFF00 + uint16(cpu.getN8())
 	cpu.ld8(cpu.getAddr(addr), value)
-}
+}*/
