@@ -9,6 +9,6 @@ func (cpu *CPU) pop16(set func(uint16)) {
 }
 func (cpu *CPU) push16(value uint16) {
 	cpu.sp -= 2
-	cpu.bus.Write(cpu.sp, byte(value&0xFF)) // LSB
-	cpu.bus.Write(cpu.sp+1, byte(value>>8)) // MSB
+	cpu.bus.Write(cpu.sp+1, byte(value&0xFF)) // LSB
+	cpu.bus.Write(cpu.sp, byte(value>>8))     // MSB
 }

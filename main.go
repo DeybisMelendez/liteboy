@@ -55,9 +55,9 @@ func main() {
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
-	steps := 200000
+	steps := 100
 	//frameDelay := time.Second / TargetFPS
-	for steps != 0 {
+	for {
 		//frameStart := time.Now()
 
 		// Manejar eventos

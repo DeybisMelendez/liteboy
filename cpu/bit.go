@@ -4,10 +4,15 @@ package cpu
 func (cpu *CPU) rlca() {
 	carry := cpu.a >> 7
 	result := (cpu.a << 1) | carry
-	cpu.f = 0
+
+	// Preserva Z, limpia N y H, actualiza C
+	cpu.f &= FlagZ
 	if carry != 0 {
 		cpu.f |= FlagC
+	} else {
+		cpu.f &^= FlagC
 	}
+
 	cpu.a = result
 }
 
@@ -24,15 +29,20 @@ func (cpu *CPU) rrca() {
 
 // RLA
 func (cpu *CPU) rla() {
-	carry := byte(0)
+	oldCarry := byte(0)
 	if cpu.f&FlagC != 0 {
-		carry = 1
+		oldCarry = 1
 	}
+
 	newCarry := cpu.a >> 7
-	cpu.a = (cpu.a << 1) | carry
-	cpu.f = 0
+	cpu.a = (cpu.a << 1) | oldCarry
+
+	// Preservar Z, limpiar N y H, actualizar C
+	cpu.f &= FlagZ
 	if newCarry != 0 {
 		cpu.f |= FlagC
+	} else {
+		cpu.f &^= FlagC
 	}
 }
 

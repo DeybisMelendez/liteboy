@@ -45,12 +45,6 @@ func NewCPU(bus *bus.Bus) *CPU {
 	return cpu
 }
 
-func (cpu *CPU) fetch() byte {
-	opcode := cpu.bus.Read(cpu.pc)
-	cpu.pc++
-	return opcode
-}
-
 func (cpu *CPU) GetCycles() int {
 	return cpu.cycles
 }

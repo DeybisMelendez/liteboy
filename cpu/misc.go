@@ -16,15 +16,11 @@ func (cpu *CPU) halt() {
 	cpu.halted = true
 }
 
-// CCF (Complement Carry Flag)
 func (cpu *CPU) ccf() {
-	if cpu.f&FlagC != 0 {
-		cpu.f &^= FlagC
-	} else {
-		cpu.f |= FlagC
-	}
-	cpu.f &^= FlagN | FlagH
+	cpu.f ^= FlagC          // Toggle Carry
+	cpu.f &^= FlagN | FlagH // Clear N and H
 }
+
 func (cpu *CPU) di() {
 	cpu.ime = false
 }
