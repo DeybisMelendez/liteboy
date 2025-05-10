@@ -1,14 +1,13 @@
 package cpu
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 func (cpu *CPU) Step() int {
 	opcode := cpu.bus.Read(cpu.pc)
-	fmt.Println("---")
-	fmt.Printf("Opcode: %02X\n", opcode)
-	fmt.Printf("Registers: pc: %04X sp: %04X\n", cpu.pc, cpu.sp)
-	fmt.Printf("Registers: a: %04X b: %04X c: %04X d: %04X\n", cpu.a, cpu.b, cpu.c, cpu.d)
-	fmt.Printf("Registers: e: %04X f: %04X h: %04X l: %04X\n", cpu.e, cpu.f, cpu.h, cpu.l)
+	cpu.Trace(opcode)
 	if cpu.halted {
 		// TODO: agregar CheckInterrupts() para cambiar halted a false
 		fmt.Println("CPU Halted")
@@ -81,8 +80,9 @@ func (cpu *CPU) Step() int {
 		// STOP 0 instruction (detiene el reloj del sistema)
 		// El siguiente byte debe ser 0x00, pero normalmente se ignora
 		// TODO: Agregar la lógica del modo STOP reloj/divider
-		panic("STOP todavía no está implementado")
-		//return cpu.update(2, 1)
+		cpu.Stopped = true
+		//panic("STOP todavía no está implementado")
+		return cpu.update(2, 1)
 
 	case 0x11: // LD DE, n16
 		cpu.ld16(cpu.setDE, cpu.getN16())
@@ -147,11 +147,14 @@ func (cpu *CPU) Step() int {
 	case 0x20: // JR NZ,e8
 		offset := cpu.getE8()
 		if cpu.f&FlagZ == 0 {
-			cpu.pc = uint16(int(cpu.pc) + 2 + int(offset))
+			oldPC := cpu.pc
+			cpu.pc += 2                                    // avanzar el PC antes del salto
+			cpu.pc = uint16(int32(cpu.pc) + int32(offset)) // salto relativo con signo
+			log.Printf("JR NZ,e8 saltando desde %04X a %04X con offset %d", oldPC, cpu.pc, offset)
 			cpu.cycles += 3
-		} else {
-			return cpu.update(2, 2)
+			return 3
 		}
+		return cpu.update(2, 2) // no salta, solo avanza
 
 	case 0x21: // LD HL, n16
 		cpu.ld16(cpu.setHL, cpu.getN16())
@@ -237,9 +240,10 @@ func (cpu *CPU) Step() int {
 
 	case 0x32: // LD (HL-), A
 		addr := cpu.getHL()
-		cpu.bus.Write(cpu.getHL(), cpu.a)
+		log.Printf("LD (HL-), A: HL=%04X, A=%02X (escribiendo en %04X)", addr, cpu.a, addr)
+		cpu.bus.Write(addr, cpu.a)
 		cpu.setHL(addr - 1)
-		return cpu.update(2, 2)
+		return cpu.update(1, 2)
 
 	case 0x33: // INC SP
 		cpu.sp++
@@ -649,8 +653,10 @@ func (cpu *CPU) Step() int {
 	case 0xAE: // XOR (HL)
 		cpu.xor8(&cpu.a, cpu.bus.Read(cpu.getHL()))
 		return cpu.update(1, 2)
-	case 0xAF: // XOR A
-		cpu.xor8(&cpu.a, cpu.a)
+	case 0xAF: // XOR A, A
+		cpu.a ^= cpu.a
+		cpu.f = 0
+		cpu.f |= FlagZ
 		return cpu.update(1, 1)
 
 	case 0xB0: // OR B
@@ -718,6 +724,7 @@ func (cpu *CPU) Step() int {
 		if cpu.f&FlagZ == 0 {
 			cpu.pc = cpu.getA16()
 			cpu.cycles += 4
+			return 4
 		} else {
 			return cpu.update(3, 3)
 		}
@@ -725,11 +732,14 @@ func (cpu *CPU) Step() int {
 	case 0xC3: // JP a16
 		cpu.pc = cpu.getA16()
 		cpu.cycles += 4
+		return 4
 
 	case 0xC4: // CALL NZ, a16
 		if cpu.f&FlagZ == 0 {
 			cpu.call16(cpu.getA16())
-			return cpu.update(6, 4)
+			cpu.cycles += 4
+			return 4
+			//return cpu.update(6, 4)
 		} else {
 			return cpu.update(3, 3)
 		}
@@ -775,14 +785,18 @@ func (cpu *CPU) Step() int {
 	case 0xCC: // CALL Z, a16
 		if cpu.f&FlagZ != 0 {
 			cpu.call16(cpu.getA16())
-			return cpu.update(3, 6)
+			cpu.cycles += 6
+			return 6
+			//return cpu.update(3, 6)
 		} else {
 			return cpu.update(3, 3)
 		}
 
 	case 0xCD: // CALL a16
 		cpu.call16(cpu.getA16())
-		return cpu.update(3, 6)
+		cpu.cycles += 6
+		return 6
+		//return cpu.update(3, 6)
 
 	case 0xCE: // ADC A, n8
 		cpu.adc8(&cpu.a, cpu.getN8())
@@ -814,7 +828,9 @@ func (cpu *CPU) Step() int {
 	case 0xD4: // CALL NC, a16
 		if cpu.f&FlagC == 0 {
 			cpu.call16(cpu.getA16())
-			return cpu.update(3, 6)
+			cpu.cycles += 6
+			return 6
+			//return cpu.update(3, 6)
 		} else {
 			return cpu.update(3, 3)
 		}
@@ -854,7 +870,9 @@ func (cpu *CPU) Step() int {
 	case 0xDC: // CALL C, a16
 		if cpu.f&FlagC != 0 {
 			cpu.call16(cpu.getA16())
-			return cpu.update(1, 6)
+			cpu.cycles += 6
+			return 6
+			//return cpu.update(1, 6)
 		} else {
 			return cpu.update(3, 3)
 		}
@@ -961,7 +979,9 @@ func (cpu *CPU) Step() int {
 
 	case 0xFF: // RST 38H
 		cpu.rst16(0x0038)
-		return cpu.update(1, 4)
+		cpu.cycles += 4
+		return 4
+		//return cpu.update(1, 4)
 
 	default:
 		fmt.Printf("Instrucción no implementada: %02X\n", opcode)

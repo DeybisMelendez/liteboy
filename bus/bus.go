@@ -1,7 +1,6 @@
 package bus
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/deybismelendez/liteboy/cartridge"
@@ -21,13 +20,61 @@ type Bus struct {
 }
 
 func NewBus(cart *cartridge.Cartridge) *Bus {
-	return &Bus{
+	bus := Bus{
 		cart:  cart,
 		ROM00: &cart.ROM[0],
 		ROMNN: &cart.ROM[1],
 		ERAM:  &[0x2000]byte{},
-		// TODO: ERAM
 	}
+	// Estado del hardware después del BIOS
+	bus.Write(0xFF00, 0xCF) // P1
+	bus.Write(0xFF01, 0x00) // SB
+	bus.Write(0xFF02, 0x7E) // SC
+	bus.Write(0xFF04, 0xAB) // DIV
+	bus.Write(0xFF05, 0x00) // TIMA
+	bus.Write(0xFF06, 0x00) // TMA
+	bus.Write(0xFF07, 0xF8) // TAC
+	bus.Write(0xFF0F, 0xE1) // IF
+
+	// Audio registers
+	bus.Write(0xFF10, 0x80)
+	bus.Write(0xFF11, 0xBF)
+	bus.Write(0xFF12, 0xF3)
+	bus.Write(0xFF13, 0xFF)
+	bus.Write(0xFF14, 0xBF)
+	bus.Write(0xFF16, 0x3F)
+	bus.Write(0xFF17, 0x00)
+	bus.Write(0xFF18, 0xFF)
+	bus.Write(0xFF19, 0xBF)
+	bus.Write(0xFF1A, 0x7F)
+	bus.Write(0xFF1B, 0xFF)
+	bus.Write(0xFF1C, 0x9F)
+	bus.Write(0xFF1D, 0xFF)
+	bus.Write(0xFF1E, 0xBF)
+	bus.Write(0xFF20, 0xFF)
+	bus.Write(0xFF21, 0x00)
+	bus.Write(0xFF22, 0x00)
+	bus.Write(0xFF23, 0xBF)
+	bus.Write(0xFF24, 0x77)
+	bus.Write(0xFF25, 0xF3)
+	bus.Write(0xFF26, 0xF0) // On real hardware: 0xF0 if DMG, 0xF1 if CGB
+
+	// PPU
+	bus.Write(0xFF40, 0x91) // LCDC
+	bus.Write(0xFF41, 0x85) // STAT (o 0x81 también se ve)
+	bus.Write(0xFF42, 0x00) // SCY
+	bus.Write(0xFF43, 0x00) // SCX
+	bus.Write(0xFF44, 0x00) // LY
+	bus.Write(0xFF45, 0x00) // LYC
+	bus.Write(0xFF46, 0xFF) // DMA
+	bus.Write(0xFF47, 0xFC) // BGP
+	bus.Write(0xFF48, 0xFF) // OBP0
+	bus.Write(0xFF49, 0xFF) // OBP1
+	bus.Write(0xFF4A, 0x00) // WY
+	bus.Write(0xFF4B, 0x00) // WX
+
+	bus.Write(0xFFFF, 0x00) // IE
+	return &bus
 }
 
 func (b *Bus) Read(addr uint16) byte {
@@ -38,59 +85,74 @@ func (b *Bus) Read(addr uint16) byte {
 	case addr < 0x8000:
 		return b.ROMNN[addr-0x4000]
 
-	case addr < 0xA000:
+	case addr >= 0x8000 && addr < 0xA000:
 		return b.VRAM[addr-0x8000]
 
-	case addr < 0xC000:
-		return b.VRAM[addr-0xA000]
+	case addr >= 0xA000 && addr < 0xC000:
+		return b.ERAM[addr-0xA000]
 
-	case addr < 0xE000:
+	case addr >= 0xC000 && addr < 0xE000:
 		return b.WRAM[addr-0xC000]
 
-	case addr < 0xFEA0:
-		fmt.Println(addr)
+	case addr >= 0xE000 && addr < 0xFE00:
+		// Echo RAM (mirror of C000–DDFF)
+		return b.WRAM[addr-0xE000]
+
+	case addr >= 0xFE00 && addr < 0xFEA0:
 		return b.OAM[addr-0xFE00]
 
-	case addr < 0xFF80:
+	case addr >= 0xFEA0 && addr < 0xFF00:
+		log.Printf("Intento de lectura en zona no usable en %04X\n", addr)
+		return 0xFF
+
+	case addr >= 0xFF00 && addr < 0xFF80:
 		return b.IO[addr-0xFF00]
 
-	case addr < 0xFFFF:
+	case addr >= 0xFF80 && addr < 0xFFFF:
 		return b.HRAM[addr-0xFF80]
 
 	case addr == 0xFFFF:
 		return b.IE
 
 	default:
-		panic(fmt.Sprintf("Intento de lectura fuera de rango: %04X", addr))
+		log.Printf("Intento de lectura fuera de rango en %04X\n", addr)
+		return 0xFF
 	}
 }
-
 func (b *Bus) Write(addr uint16, value byte) {
 	switch {
 	case addr < 0x8000:
-		// ROM: no se puede escribir.
-		// TODO: En el futuro aquí iría MBC.
-		log.Printf("Intento de escritura en ROM en %04X: %02X", addr, value)
+		log.Printf("Intento de escritura en ROM en %04X: %02X\n", addr, value)
 
-	case addr < 0xA000:
+	case addr >= 0x8000 && addr < 0xA000:
 		b.VRAM[addr-0x8000] = value
 
-	case addr < 0xC000:
-		b.VRAM[addr-0xA000] = value
+	case addr >= 0xA000 && addr < 0xC000:
+		b.ERAM[addr-0xA000] = value
 
-	case addr < 0xE000:
+	case addr >= 0xC000 && addr < 0xE000:
 		b.WRAM[addr-0xC000] = value
 
-	case addr < 0xFEA0:
+	case addr >= 0xE000 && addr < 0xFE00:
+		// Echo RAM (mirror of C000–DDFF)
+		b.WRAM[addr-0xE000] = value
+
+	case addr >= 0xFE00 && addr < 0xFEA0:
 		b.OAM[addr-0xFE00] = value
 
-	case addr < 0xFF80:
+	case addr >= 0xFEA0 && addr < 0xFF00:
+		log.Printf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
+
+	case addr >= 0xFF00 && addr < 0xFF80:
 		b.IO[addr-0xFF00] = value
 
-	case addr < 0xFFFF:
+	case addr >= 0xFF80 && addr < 0xFFFF:
 		b.HRAM[addr-0xFF80] = value
 
+	case addr == 0xFFFF:
+		b.IE = value
+
 	default:
-		panic(fmt.Sprintf("Intento de escritura fuera de rango: %04X", addr))
+		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
 	}
 }

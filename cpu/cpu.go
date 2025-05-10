@@ -4,6 +4,8 @@ package cpu
 // Reference: https://rgbds.gbdev.io/docs/v0.9.2/gbz80.7
 
 import (
+	"log"
+
 	"github.com/deybismelendez/liteboy/bus"
 )
 
@@ -18,6 +20,7 @@ type CPU struct {
 	sp        uint16 // Stack Pointer
 	cycles    int
 	halted    bool
+	Stopped   bool
 	ime       bool
 	enableIME bool
 	bus       *bus.Bus
@@ -37,10 +40,25 @@ func NewCPU(bus *bus.Bus) *CPU {
 	cpu.pc = 0x0100
 	cpu.sp = 0xFFFE
 	cpu.halted = false
+	cpu.Stopped = false
 	cpu.bus = bus
 	return cpu
 }
 
+func (cpu *CPU) fetch() byte {
+	opcode := cpu.bus.Read(cpu.pc)
+	cpu.pc++
+	return opcode
+}
+
 func (cpu *CPU) GetCycles() int {
 	return cpu.cycles
+}
+func (cpu *CPU) Trace(opcode byte) {
+	log.Printf("Opcode: %02X PC=%04X SP=%04X A=%02X B=%02X C=%02X D=%02X E=%02X F=%02X H=%02X L=%02X",
+		opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)
+}
+
+func (cpu *CPU) GetPC() uint16 {
+	return cpu.pc
 }

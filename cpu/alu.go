@@ -40,21 +40,19 @@ func (cpu *CPU) inc16(set func(uint16), value uint16) {
 	set(value + 1)
 }
 
-// DEC 8 bits Z 1 H -
-func (cpu *CPU) dec8(value *byte) {
-	result := *value - 1
-	cpu.f |= FlagN // N = 1
-	if result == 0 {
+func (cpu *CPU) dec8(r *byte) {
+	old := *r
+	*r--
+
+	cpu.f &= FlagC // solo preserva Carry
+	cpu.f |= FlagN // DEC siempre activa N
+
+	if *r == 0 {
 		cpu.f |= FlagZ
-	} else {
-		cpu.f &^= FlagZ
 	}
-	if (*value & 0x0F) == 0x00 {
-		cpu.f |= FlagH
-	} else {
-		cpu.f &^= FlagH
+	if (old & 0x0F) == 0 {
+		cpu.f |= FlagH // half carry de 0x10 a 0x0F
 	}
-	*value = result
 }
 
 // DEC 8 bits Z 1 H -
