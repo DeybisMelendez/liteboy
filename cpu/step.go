@@ -9,7 +9,7 @@ func (cpu *CPU) Step() int {
 	// Fetch
 	opcode := cpu.bus.Read(cpu.pc)
 	// Imprimir logs
-	cpu.Trace(opcode)
+	//cpu.Trace(opcode)
 	cpu.pc++
 
 	if cpu.halted {
@@ -723,7 +723,8 @@ func (cpu *CPU) Step() int {
 		return 3
 
 	case 0xC3: // JP a16
-		cpu.pc = cpu.getA16()
+		addr := cpu.getA16()
+		cpu.pc = addr
 		return 4
 
 	case 0xC4: // CALL NZ, a16
@@ -845,7 +846,7 @@ func (cpu *CPU) Step() int {
 		addr := cpu.getA16()
 		if cpu.f&FlagC != 0 {
 			cpu.pc = addr
-			cpu.cycles += 4
+			return 4
 		}
 		return 3
 

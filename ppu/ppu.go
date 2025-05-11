@@ -34,13 +34,18 @@ type PPU struct {
 func NewPPU(bus *bus.Bus) *PPU {
 	return &PPU{bus: bus}
 }
-
+func (p *PPU) lcdEnabled() bool {
+	return p.bus.IO[0x40]&LCDCFlagLCDEnable != 0
+}
 func (p *PPU) Step(cycles int) {
 	if !p.lcdEnabled() {
+		p.mode = ModeHBlank
+		p.ly = 0
+		p.bus.IO[0x44] = 0
 		return
 	}
-	//fmt.Println("Cycles", p.cycleCounter)
-	p.cycleCounter += cycles * 4
+
+	p.cycleCounter += cycles
 
 	switch p.mode {
 	case ModeOAM:
@@ -61,7 +66,7 @@ func (p *PPU) Step(cycles int) {
 			p.bus.IO[0x44] = p.ly
 			if p.ly == 144 {
 				p.mode = ModeVBlank
-				// Generar interrupción VBlank aquí si es necesario
+				p.bus.IO[0x0F] |= 0x01 // Interrupción VBlank
 			} else {
 				p.mode = ModeOAM
 			}
@@ -78,10 +83,6 @@ func (p *PPU) Step(cycles int) {
 			}
 		}
 	}
-}
-
-func (p *PPU) lcdEnabled() bool {
-	return p.bus.IO[0x40]&LCDCFlagLCDEnable != 0
 }
 
 func (p *PPU) renderScanline() {
@@ -116,7 +117,7 @@ func (p *PPU) renderScanline() {
 		tileIndex := p.bus.Read(tileIndexAddr)
 		var tileAddr uint16
 		if signedIndex {
-			tileAddr = tileDataAddr + uint16(int8(tileIndex))*16
+			tileAddr = tileDataAddr + uint16(int16(int8(tileIndex))*16)
 		} else {
 			tileAddr = tileDataAddr + uint16(tileIndex)*16
 		}
@@ -130,9 +131,16 @@ func (p *PPU) renderScanline() {
 		hi := (byte2 >> bit) & 1
 		color := (hi << 1) | lo
 
-		rgb := bgPalette(color)
-		p.Framebuffer[y][x] = rgb
+		finalColor := p.mapColor(color)
+		bg := bgPalette(finalColor)
+
+		p.Framebuffer[y][x] = bg
 	}
+}
+
+func (p *PPU) mapColor(color byte) byte {
+	bgp := p.bus.IO[0x47] // BGP
+	return (bgp >> (color * 2)) & 0x03
 }
 
 func bgPalette(color byte) uint32 {
@@ -146,6 +154,6 @@ func bgPalette(color byte) uint32 {
 	case 3:
 		return 0x000000FF // Negro
 	default:
-		return 0xFF00FFFF // Magenta (color de error)
+		return 0xFF00FFFF // Magenta (error)
 	}
 }

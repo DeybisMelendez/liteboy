@@ -1,17 +1,5 @@
 package cpu
 
-// update actualiza el estado del cpu saltando al siguiente ciclo
-func (cpu *CPU) update(bytes uint16, cycles int) int {
-	cpu.pc += bytes
-	cpu.cycles += cycles
-	if cpu.enableIME {
-		cpu.ime = true
-		cpu.enableIME = false
-	}
-
-	return cycles
-}
-
 func (cpu *CPU) halt() {
 	cpu.halted = true
 }

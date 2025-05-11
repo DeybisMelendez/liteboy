@@ -1,10 +1,14 @@
 package main
 
 import (
+	"log"
+	"unsafe"
+
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 const (
@@ -16,7 +20,8 @@ const (
 
 func main() {
 	//start := time.Now()
-	/*var cycleCount int
+	var cycleCount int
+
 	// Inicializar SDL
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
 		log.Fatalf("No se pudo inicializar SDL: %v", err)
@@ -46,53 +51,56 @@ func main() {
 	if err != nil {
 		log.Fatalf("No se pudo crear la textura: %v", err)
 	}
-	defer texture.Destroy()*/
+	defer texture.Destroy()
 
 	// Cargar ROM
-	cart := cartridge.NewCartridge("roms/tetris.gb")
+	cart := cartridge.NewCartridge("roms/drmario.gb")
 
 	// Inicializar componentes
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
-	steps := 100
+	//steps := 10000000000
 	//frameDelay := time.Second / TargetFPS
-	for {
+	running := true
+	for running {
 		//frameStart := time.Now()
 
 		// Manejar eventos
-		/*for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
 				running = false
 			}
-		}*/
+		}
 
 		// Ejecutar CPU y PPU
 		cycles := gameCPU.Step()
-		//cycleCount += cycles
+		cycleCount += cycles
 		gamePPU.Step(cycles)
-		steps--
+		//steps--
 		// Actualizar textura con el framebuffer del PPU
-		/*pixels := make([]uint32, ScreenWidth*ScreenHeight)
-		for y := 0; y < ScreenHeight; y++ {
-			for x := 0; x < ScreenWidth; x++ {
-				pixels[y*ScreenWidth+x] = gamePPU.Framebuffer[y][x]
+		if cycleCount >= 1123584 {
+			pixels := make([]uint32, ScreenWidth*ScreenHeight)
+			for y := 0; y < ScreenHeight; y++ {
+				for x := 0; x < ScreenWidth; x++ {
+					pixels[y*ScreenWidth+x] = gamePPU.Framebuffer[y][x]
+				}
 			}
-		}
-		err = texture.Update(nil, unsafe.Pointer(&pixels[0]), ScreenWidth*4)
-		if err != nil {
-			log.Printf("Error al actualizar la textura: %v", err)
+			err = texture.Update(nil, unsafe.Pointer(&pixels[0]), ScreenWidth*4)
+			if err != nil {
+				log.Printf("Error al actualizar la textura: %v", err)
+			}
+
+			// Renderizar
+			renderer.Clear()
+			err = renderer.Copy(texture, nil, nil)
+			if err != nil {
+				log.Printf("Error al copiar la textura: %v", err)
+			}
+			renderer.Present()
 		}
 
-		// Renderizar
-		renderer.Clear()
-		err = renderer.Copy(texture, nil, nil)
-		if err != nil {
-			log.Printf("Error al copiar la textura: %v", err)
-		}
-		renderer.Present()
-		*/
 		// Controlar FPS
 		/*frameTime := time.Since(frameStart)
 		if frameDelay > frameTime {
