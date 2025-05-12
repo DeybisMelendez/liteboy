@@ -2,13 +2,13 @@ package ppu
 
 type LCDC byte
 
-// 0 = Off; 1 = On
+// false = Off; true = On
 func (l LCDC) IsLCDEnabled() bool {
 	return l&0x80 != 0
 }
 
-// 0 = 9800–9BFF; 1 = 9C00–9FFF
-func (l LCDC) WindowTileMapArea() uint16 {
+// 9800; 9C00
+func (l LCDC) GetWindowTileMapArea() uint16 {
 	if l&0x40 != 0 {
 		return 0x9C00
 	} else {
@@ -16,13 +16,13 @@ func (l LCDC) WindowTileMapArea() uint16 {
 	}
 }
 
-// 0 = Off; 1 = On
+// false = Off; true = On
 func (l LCDC) IsWindowEnabled() bool {
 	return l&0x20 != 0
 }
 
-// 0 = 8800–97FF; 1 = 8000–8FFF
-func (l LCDC) BGAndWindowTileArea() uint16 {
+// 8800; 8000
+func (l LCDC) GetBGAndWindowTileDataArea() uint16 {
 	if l&0x10 != 0 {
 		return 0x8000 // unsigned addressing
 	} else {
@@ -30,8 +30,8 @@ func (l LCDC) BGAndWindowTileArea() uint16 {
 	}
 }
 
-// 0 = 9800–9BFF; 1 = 9C00–9FFF
-func (l LCDC) BGTileMapArea() uint16 {
+// 9800; 9C00
+func (l LCDC) GetBGTileMapArea() uint16 {
 	if l&0x08 != 0 {
 		return 0x9C00
 	} else {
@@ -39,17 +39,19 @@ func (l LCDC) BGTileMapArea() uint16 {
 	}
 }
 
-// 0 = 8×8; 1 = 8×16
-func (l LCDC) ObjIs8x8() bool {
-	return l&0x04 == 0
+func (ppu *PPU) isLCDEnabled() bool {
+	return ppu.bus.Read(LCDCRegister)&0x80 != 0
+}
+func (ppu *PPU) isObj8x8() bool {
+	return ppu.bus.Read(LCDCRegister)&0x04 == 0
 }
 
-// 0 = Off; 1 = On
+// false = Off; true = On
 func (l LCDC) IsObjEnabled() bool {
 	return l&0x02 != 0
 }
 
-// 0 = Off; 1 = On
-func (l LCDC) IsBGWindowEnabled() bool {
+// false = Off; true = On
+func (l LCDC) IsBGAndWindowEnabled() bool {
 	return l&0x01 != 0
 }

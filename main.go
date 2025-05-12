@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"unsafe"
 
@@ -16,13 +17,12 @@ const (
 	ScreenHeight = 144
 	Scale        = 4
 	TargetFPS    = 60
+	TargetCycle  = 70224 // Ciclos por fotograma (la cantidad de ciclos para un fotograma de GameBoy)
 )
 
 func main() {
-	//start := time.Now()
-	var cycleCount int
-
-	// Inicializar SDL
+	steps := 0
+	// Inicialización de SDL
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
 		log.Fatalf("No se pudo inicializar SDL: %v", err)
 	}
@@ -54,19 +54,24 @@ func main() {
 	defer texture.Destroy()
 
 	// Cargar ROM
-	cart := cartridge.NewCartridge("roms/drmario.gb")
+	cart := cartridge.NewCartridge("roms/tetris.gb")
 
 	// Inicializar componentes
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
-	//steps := 10000000000
-	//frameDelay := time.Second / TargetFPS
+
+	// Variables de sincronización de FPS y ciclo
+	//var lastTime time.Time
+	//var frameDelay = time.Second / TargetFPS
+	var cycleCount int
+
+	// Variables de ciclo de CPU y PPU
 	running := true
 	for running {
-		//frameStart := time.Now()
-
-		// Manejar eventos
+		//fmt.Println("Step:", steps)
+		steps++
+		// Manejar eventos SDL
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
@@ -74,20 +79,19 @@ func main() {
 			}
 		}
 
-		// Ejecutar CPU y PPU
-		cycles := gameCPU.Step()
-		cycleCount += cycles
-		gamePPU.Step(cycles)
-		//steps--
+		// Calculamos el tiempo transcurrido desde el último fotograma
+		//start := time.Now()
+
+		// Ejecutar la CPU y la PPU
+		cycles := gameCPU.Step() // Ejecutamos la CPU
+		cycleCount += cycles     // Acumulamos los ciclos de CPU
+		gamePPU.Step(cycles * 4) // Ejecutamos la PPU
 		// Actualizar textura con el framebuffer del PPU
-		if cycleCount >= 1123584 {
-			pixels := make([]uint32, ScreenWidth*ScreenHeight)
-			for y := 0; y < ScreenHeight; y++ {
-				for x := 0; x < ScreenWidth; x++ {
-					pixels[y*ScreenWidth+x] = gamePPU.Framebuffer[y][x]
-				}
-			}
-			err = texture.Update(nil, unsafe.Pointer(&pixels[0]), ScreenWidth*4)
+		if cycleCount > 70224 {
+			fmt.Println("imprime")
+			cycleCount -= 70224
+
+			err := texture.Update(nil, unsafe.Pointer(&gamePPU.Framebuffer[0]), ScreenWidth*4)
 			if err != nil {
 				log.Printf("Error al actualizar la textura: %v", err)
 			}
@@ -101,16 +105,17 @@ func main() {
 			renderer.Present()
 		}
 
-		// Controlar FPS
-		/*frameTime := time.Since(frameStart)
-		if frameDelay > frameTime {
-			sdl.Delay(uint32((frameDelay - frameTime).Milliseconds()))
+		// Controlar FPS: mantener la tasa de fotogramas constante
+		/*elapsed := time.Since(start)
+		if elapsed < frameDelay {
+			sdl.Delay(uint32(frameDelay - elapsed)) // Ajustar la velocidad del juego según el FPS
 		}*/
-		// Calcula velocidad cada segundo
-		/*if time.Since(start) >= time.Second {
-			fmt.Printf("CPU Speed: %d cycles/sec\n", cycleCount)
+
+		// Reportar la velocidad de la CPU cada segundo
+		/*if time.Since(lastTime) >= time.Second {
+			log.Printf("CPU Speed: %d cycles/sec", cycleCount)
 			cycleCount = 0
-			start = time.Now()
+			lastTime = time.Now()
 		}*/
 	}
 }
