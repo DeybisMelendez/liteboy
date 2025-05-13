@@ -71,7 +71,7 @@ func main() {
 	}
 	defer texture.Destroy()
 	// Test de blargg que funciona: 03, 05, 07, 08
-	cart := cartridge.NewCartridge("roms/11.gb")
+	cart := cartridge.NewCartridge("roms/blargg/cpu_instrs/individual/01-special.gb")
 
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)

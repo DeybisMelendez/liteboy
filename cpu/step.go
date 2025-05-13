@@ -42,7 +42,7 @@ func (cpu *CPU) Step() int {
 		cpu.decR(&cpu.b)
 		return 1
 
-	case 0x06: // LD B,n8
+	case 0x06: // LD B, n8
 		cpu.b = cpu.getN8()
 		return 2
 	case 0x07: // RLCA
@@ -108,7 +108,7 @@ func (cpu *CPU) Step() int {
 		cpu.decR(&cpu.d)
 		return 1
 
-	case 0x16: // LD D,n8
+	case 0x16: // LD D, n8
 		cpu.d = cpu.getN8()
 		return 2
 
@@ -141,7 +141,7 @@ func (cpu *CPU) Step() int {
 		cpu.decR(&cpu.e)
 		return 1
 
-	case 0x1E: // LD E,n8
+	case 0x1E: // LD E, n8
 		cpu.e = cpu.getN8()
 		return 2
 
@@ -179,7 +179,7 @@ func (cpu *CPU) Step() int {
 		cpu.decR(&cpu.h)
 		return 1
 
-	case 0x26: // LD H,n8
+	case 0x26: // LD H, n8
 		cpu.h = cpu.getN8()
 		return 2
 
@@ -217,7 +217,7 @@ func (cpu *CPU) Step() int {
 		cpu.decR(&cpu.l)
 		return 1
 
-	case 0x2E: // LD L,n8
+	case 0x2E: // LD L, n8
 		cpu.l = cpu.getN8()
 		return 2
 
@@ -880,7 +880,7 @@ func (cpu *CPU) Step() int {
 		return 4
 
 	case 0xE6: // AND A,n8
-		cpu.add8(&cpu.a, cpu.getN8())
+		cpu.and8(&cpu.a, cpu.getN8())
 		return 2
 	case 0xE7: // RST 20H
 		cpu.rst16(0x20)
@@ -920,7 +920,7 @@ func (cpu *CPU) Step() int {
 		return 3
 
 	case 0xF1: // POP AF
-		cpu.pop16(cpu.ldAF)
+		cpu.popAF()
 		return 3
 
 	case 0xF2: // LDH A, (C)
@@ -932,7 +932,7 @@ func (cpu *CPU) Step() int {
 		return 1
 
 	case 0xF5: // PUSH AF
-		cpu.push16(cpu.getAF())
+		cpu.pushAF()
 		return 4
 
 	case 0xF6: // OR A, n8
