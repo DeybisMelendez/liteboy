@@ -110,16 +110,16 @@ func (cpu *CPU) rr(value byte) byte {
 	return result
 }
 func (cpu *CPU) bit(bitIndex uint8, value byte) {
-	// Verifica si el bit está en 0 o 1
+	// Verifica si el bit está en 0 o 1 y actualiza el flag Z
 	if value&(1<<bitIndex) == 0 {
-		cpu.f |= 0x80 // Z (si es 0)
+		cpu.f |= FlagZ // Z = 1 si el bit es 0
 	} else {
-		cpu.f &= 0x7F // Limpiar la bandera Z
+		cpu.f &^= FlagZ // Z = 0 si el bit es 1
 	}
 
-	// N siempre es 0 para BIT
-	// H siempre es 1 para BIT
-	cpu.f |= 0x40
+	// H siempre se activa (bit 6), N siempre se limpia (bit 5)
+	cpu.f |= FlagH
+	cpu.f &^= FlagN
 }
 
 func (cpu *CPU) sla(value byte) byte {
