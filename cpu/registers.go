@@ -46,7 +46,7 @@ func (cpu *CPU) getN16() uint16 {
 
 // AF combinado
 func (cpu *CPU) getAF() uint16 {
-	return uint16(cpu.a)<<8 | uint16(cpu.f&0xF0) // Solo los 4 bits superiores de F son válidos
+	return uint16(cpu.a)<<8 | uint16(cpu.f&validFlagsMask) // Solo los 4 bits superiores de F son válidos
 }
 
 // BC combinado

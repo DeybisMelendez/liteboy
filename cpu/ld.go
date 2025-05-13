@@ -6,10 +6,11 @@ package cpu
 /*func (cpu *CPU) ld16(set func(uint16), value uint16) {
 	set(value)
 }*/
+const validFlagsMask = FlagZ | FlagN | FlagH | FlagC
 
 func (cpu *CPU) ldAF(value uint16) {
 	cpu.a = byte(value >> 8)
-	cpu.f = byte(value & 0xF0) // Solo se permiten los bits de flags (Z, N, H, C)
+	cpu.f = byte(value) & validFlagsMask // limpia bits bajos no usados
 }
 
 func (cpu *CPU) ldBC(value uint16) {

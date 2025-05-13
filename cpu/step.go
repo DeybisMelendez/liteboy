@@ -9,7 +9,7 @@ func (cpu *CPU) Step() int {
 	// Fetch
 	opcode := cpu.bus.Read(cpu.pc)
 	// Imprimir logs
-	cpu.Trace(opcode)
+	//cpu.Trace(opcode)
 	cpu.pc++
 
 	if cpu.halted {
@@ -505,7 +505,7 @@ func (cpu *CPU) Step() int {
 		//cpu.a = cpu.a
 		return 1
 	case 0x80: // ADD A,B
-		cpu.a = cpu.b
+		cpu.add8(&cpu.a, cpu.b)
 		return 1
 	case 0x81: // ADD A,C
 		cpu.add8(&cpu.a, cpu.c)
@@ -882,6 +882,9 @@ func (cpu *CPU) Step() int {
 	case 0xE6: // AND A,n8
 		cpu.add8(&cpu.a, cpu.getN8())
 		return 2
+	case 0xE7: // RST 20H
+		cpu.rst16(0x20)
+		return 4
 
 	case 0xE8: // ADD SP, e8
 		e8 := int16(cpu.getE8())
