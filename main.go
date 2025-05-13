@@ -70,8 +70,8 @@ func main() {
 		log.Fatalf("No se pudo crear la textura: %v", err)
 	}
 	defer texture.Destroy()
-	// Test de blargg que funciona: 01, 03, 04, 05, 06, 07, 08, 09
-	cart := cartridge.NewCartridge("roms/blargg/cpu_instrs/individual/11-op a,(hl).gb")
+	// Test de blargg que funciona: 01, 03, 04, 05, 06, 07, 08, 09, 10, 11
+	cart := cartridge.NewCartridge("roms/blargg/cpu_instrs/individual/10-bit ops.gb")
 
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
