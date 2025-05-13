@@ -8,7 +8,7 @@ func (cpu *CPU) Step() int {
 		if interruptsPending {
 			cpu.halted = false
 			if !cpu.ime {
-				// HALT bug: el siguiente opcode debe ejecutarse de nuevo,
+				// HALT bug: el siguiente opcode debe ejecutarse de nuevo
 				cpu.updateTimers(4)
 				return 1
 			}

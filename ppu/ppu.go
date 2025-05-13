@@ -166,7 +166,6 @@ func (ppu *PPU) updateCoincidenceFlag() {
 	}
 }
 func (ppu *PPU) runVRAM() {
-	//ppu.bus.Write(0xFF42, 0x00)
 	// Calculamos el número de ciclos basados en la posición de SCX y los sprites
 	var baseCycles = 172                              // valor base para el Modo 3
 	spriteCycles := len(ppu.spritesOnCurrentLine) * 2 // Cada sprite puede requerir más ciclos para la transferencia
@@ -272,8 +271,75 @@ func (ppu *PPU) runVRAM() {
 	for x := 0; x < ScreenWidth; x++ {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
+	ppu.renderSprites()
 	ppu.cycles -= baseCycles + spriteCycles
 	ppu.setMode(ModeHBlank)
+}
+
+func (ppu *PPU) renderSprites() {
+	spriteHeight := byte(8)
+	if !ppu.isObj8x8() {
+		spriteHeight = 16
+	}
+
+	ly := ppu.bus.Read(LYRegister)
+
+	for _, sprite := range ppu.spritesOnCurrentLine {
+		spriteY := int(sprite.Y) - 16
+		spriteX := int(sprite.X) - 8
+		line := int(ly) - spriteY
+
+		if sprite.Atributes&0x40 != 0 { // Y flip
+			line = int(spriteHeight) - 1 - line
+		}
+
+		tileIndex := sprite.TileIndex
+		if spriteHeight == 16 {
+			tileIndex &= 0xFE // Ignorar bit 0 en modo 8x16
+		}
+
+		tileAddr := 0x8000 + uint16(tileIndex)*16 + uint16(line)*2
+		byte1 := ppu.bus.Read(tileAddr)
+		byte2 := ppu.bus.Read(tileAddr + 1)
+
+		for x := 0; x < 8; x++ {
+			bit := 7 - x
+			if sprite.Atributes&0x20 != 0 { // X flip
+				bit = x
+			}
+
+			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
+			if colorID == 0 {
+				continue // Transparente
+			}
+
+			var paletteAddr uint16 = 0xFF48
+			if sprite.Atributes&0x10 != 0 {
+				paletteAddr = 0xFF49
+			}
+
+			palette := ppu.bus.Read(paletteAddr)
+			color := (palette >> (colorID * 2)) & 0x03
+			screenX := spriteX + x
+
+			if screenX < 0 || screenX >= ScreenWidth {
+				continue
+			}
+
+			// Prioridad: fondo (bit 7)
+			bgPriority := sprite.Atributes&0x80 != 0
+			if bgPriority {
+				// Omitimos dibujar si fondo no es color 0
+				bgPixel := ppu.Framebuffer[getFramebufferIndex(screenX, int(ly))]
+				if bgPixel != getColorFromPalette(0) {
+					continue
+				}
+			}
+			//ppu.addPixelToFIFO(getColorFromPalette(color))
+			ppu.Framebuffer[getFramebufferIndex(screenX, int(ly))] = getColorFromPalette(color)
+		}
+	}
+
 }
 
 func getFramebufferIndex(x, y int) int {

@@ -926,7 +926,7 @@ func (cpu *CPU) execute(opcode byte) int {
 		return 2
 
 	case 0xF7: // RST 30H
-		cpu.rst16(0x0030)
+		cpu.rst16(0x30)
 		return 4
 
 	case 0xF8: // LD HL, SP+e8
@@ -950,7 +950,7 @@ func (cpu *CPU) execute(opcode byte) int {
 		return 2
 
 	case 0xFF: // RST 38H
-		cpu.rst16(0x0038)
+		cpu.rst16(0x38)
 		return 4
 
 	default:
