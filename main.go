@@ -71,7 +71,7 @@ func main() {
 	}
 	defer texture.Destroy()
 
-	cart := cartridge.NewCartridge("roms/drmario.gb")
+	cart := cartridge.NewCartridge("roms/01.gb")
 
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)
@@ -82,20 +82,16 @@ func main() {
 	//frames := 0
 	//frameDelay := time.Second / TargetFPS
 
-	//running := true
-	for {
+	running := true
+	for running {
 		//start := time.Now()
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
-				//running = false
+				running = false
 			}
 		}
-
-		cycles := gameCPU.Step()
-		cycleCount += cycles
-		gamePPU.Step(cycles)
 
 		if cycleCount >= TargetCycle {
 			cycleCount -= TargetCycle
@@ -113,6 +109,10 @@ func main() {
 				log.Printf("Error al copiar la textura: %v", err)
 			}
 			renderer.Present()
+		} else {
+			cycles := gameCPU.Step()
+			cycleCount += cycles
+			gamePPU.Step(cycles)
 		}
 
 		/*if time.Since(lastFPSUpdate) >= time.Second {

@@ -44,45 +44,53 @@ func (cpu *CPU) decR(r *byte) {
 	*r = result
 }
 
-// INC Address 8 bits Z 0 H -
-func (cpu *CPU) inc8Address(addr uint16) {
+// INC (HL) 8 bits Z 0 H -
+func (cpu *CPU) incHL() {
+	addr := cpu.getHL()
 	value := cpu.bus.Read(addr)
-	result := value + 1
+	result := byte(value + 1)
+
+	// Flags
 	cpu.f &^= FlagN // N = 0
 	if result == 0 {
-		cpu.f |= FlagZ
+		cpu.f |= FlagZ // Z
 	} else {
 		cpu.f &^= FlagZ
 	}
-	if (value&0x0F)+1 > 0x0F {
+	if (value&0x0F)+1 > 0x0F { // Half Carry
 		cpu.f |= FlagH
 	} else {
 		cpu.f &^= FlagH
 	}
-	cpu.bus.Write(addr, value)
+
+	cpu.bus.Write(addr, result)
+}
+
+// DEC (HL) 8 bits Z 1 H -
+func (cpu *CPU) decHL() {
+	addr := cpu.getHL()
+	value := cpu.bus.Read(addr)
+	result := byte(value - 1)
+
+	// Flags
+	cpu.f |= FlagN // N = 1
+	if result == 0 {
+		cpu.f |= FlagZ // Z
+	} else {
+		cpu.f &^= FlagZ
+	}
+	if (value & 0x0F) == 0x00 { // Half Borrow (H flag)
+		cpu.f |= FlagH
+	} else {
+		cpu.f &^= FlagH
+	}
+
+	cpu.bus.Write(addr, result)
 }
 
 // INC 16 bits - - - -
 func (cpu *CPU) inc16(set func(uint16), value uint16) {
 	set(value + 1)
-}
-
-// DEC 8 bits Z 1 H -
-func (cpu *CPU) dec8Address(addr uint16) {
-	value := cpu.bus.Read(addr)
-	result := value - 1
-	cpu.f |= FlagN   // N = 1
-	if result == 0 { // Z
-		cpu.f |= FlagZ
-	} else {
-		cpu.f &^= FlagZ
-	}
-	if (value & 0x0F) == 0x00 { // H
-		cpu.f |= FlagH
-	} else {
-		cpu.f &^= FlagH
-	}
-	cpu.bus.Write(addr, value)
 }
 
 // DEC 16 bits - - - -

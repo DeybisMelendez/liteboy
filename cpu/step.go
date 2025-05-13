@@ -9,7 +9,7 @@ func (cpu *CPU) Step() int {
 	// Fetch
 	opcode := cpu.bus.Read(cpu.pc)
 	// Imprimir logs
-	//cpu.Trace(opcode)
+	cpu.Trace(opcode)
 	cpu.pc++
 
 	if cpu.halted {
@@ -152,7 +152,7 @@ func (cpu *CPU) Step() int {
 	case 0x20: // JR NZ,e8
 		offset := cpu.getE8()
 		if cpu.f&FlagZ == 0 {
-			cpu.pc = uint16(int32(cpu.pc) + int32(offset))
+			cpu.pc = uint16(int16(cpu.pc) + int16(offset))
 			return 3
 		}
 		return 2
@@ -228,7 +228,7 @@ func (cpu *CPU) Step() int {
 	case 0x30: // JR NC, e8
 		offset := cpu.getE8()
 		if cpu.f&FlagC == 0 {
-			cpu.pc = uint16(int32(cpu.pc) + int32(offset))
+			cpu.pc = uint16(int16(cpu.pc) + int16(offset))
 			return 3
 		}
 		return 2
@@ -248,11 +248,11 @@ func (cpu *CPU) Step() int {
 		return 2
 
 	case 0x34: // INC (HL)
-		cpu.inc8Address(cpu.getHL())
+		cpu.incHL()
 		return 3
 
 	case 0x35: // DEC (HL)
-		cpu.dec8Address(cpu.getHL())
+		cpu.decHL()
 		return 3
 
 	case 0x36: // LD (HL), n8
@@ -266,7 +266,7 @@ func (cpu *CPU) Step() int {
 	case 0x38: // JR C, e8
 		offset := cpu.getE8()
 		if cpu.f&FlagC != 0 {
-			cpu.pc = uint16(int32(cpu.pc) + int32(offset))
+			cpu.pc = uint16(int16(cpu.pc) + int16(offset))
 			return 3
 		}
 		return 2
@@ -728,8 +728,9 @@ func (cpu *CPU) Step() int {
 		return 4
 
 	case 0xC4: // CALL NZ, a16
+		addr := cpu.getA16()
 		if cpu.f&FlagZ == 0 {
-			cpu.call16(cpu.getA16())
+			cpu.call16(addr)
 			return 4
 		}
 		return 3
@@ -863,8 +864,7 @@ func (cpu *CPU) Step() int {
 		cpu.rst16(0x18)
 		return 4
 	case 0xE0: // LDH (a8), A
-		addr := cpu.getA8()
-		cpu.bus.Write(addr, cpu.a)
+		cpu.bus.Write(cpu.getA8(), cpu.a)
 		return 3
 
 	case 0xE1: // POP HL

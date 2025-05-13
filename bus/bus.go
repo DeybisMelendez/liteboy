@@ -111,7 +111,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.OAM[addr-0xFE00]
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Printf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
+		log.Panicf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
 		return 0xFF
 
 	case addr >= 0xFF00 && addr < 0xFF80:
@@ -124,7 +124,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.IE
 
 	default:
-		log.Printf("Intento de lectura fuera de rango en %04X\n", addr)
+		log.Panicf("Intento de lectura fuera de rango en %04X\n", addr)
 		return 0xFF
 	}
 }
@@ -151,7 +151,7 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.OAM[addr-0xFE00] = value
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Printf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
+		log.Panicf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
 
 	case addr >= 0xFF00 && addr < 0xFF80:
 		if addr == 0xFF50 && value != 0 {

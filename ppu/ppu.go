@@ -11,6 +11,8 @@ const (
 	SCXRegister  = 0xFF43
 	LYRegister   = 0xFF44
 	LYCRegister  = 0xFF45
+	WYRegister   = 0xFF4A // Window Y Position
+	WXRegister   = 0xFF4B // Window X Position (el valor real en pantalla es WX - 7)
 
 	ScreenWidth  = 160
 	ScreenHeight = 144
@@ -26,8 +28,6 @@ const (
 )
 
 type PPU struct {
-	//lcdc                 LCDC
-	//stat                 STAT
 	bus                  *bus.Bus
 	Framebuffer          []uint32
 	cycles               int
@@ -48,7 +48,6 @@ func NewPPU(b *bus.Bus) *PPU {
 func (ppu *PPU) addPixelToFIFO(pixel uint32) {
 	if len(ppu.pixelFIFO) < ppu.fifoSize {
 		ppu.pixelFIFO = append(ppu.pixelFIFO, pixel)
-		//log.Printf("[PPU] Pixel agregado a FIFO (len=%d)", len(ppu.pixelFIFO))
 	}
 }
 
@@ -58,7 +57,6 @@ func (ppu *PPU) popPixelFromFIFO(x, y int) {
 		pixel := ppu.pixelFIFO[0]
 		ppu.pixelFIFO = ppu.pixelFIFO[1:] // Elimina el primer píxel de la cola
 		ppu.Framebuffer[getFramebufferIndex(x, y)] = pixel
-		//log.Printf("[PPU] Pixel extraído de FIFO y escrito en (%d, %d)", x, y)
 	}
 }
 
@@ -81,23 +79,18 @@ func (ppu *PPU) Step(tCycles int) {
 
 	switch ppu.getMode() {
 	case ModeOAM:
-		//log.Printf("[PPU] Modo OAM - Ciclos acumulados: %d", ppu.cycles) // LOG
 		ppu.scanOAM()
 	case ModeVRAM:
-		//log.Printf("[PPU] Modo VRAM (Modo 3) - Ciclos acumulados: %d", ppu.cycles) // LOG
 		ppu.runVRAM()
 	case ModeHBlank:
-		//log.Printf("[PPU] Modo HBlank - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		ppu.runHBlank()
 	case ModeVBlank:
-		//log.Printf("[PPU] Modo VBlank - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		ppu.runVBlank()
 	}
 }
 
 func (ppu *PPU) scanOAM() {
 	if ppu.cycles >= 80 {
-		//log.Printf("[PPU] Escaneando OAM - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		spriteHeight := byte(8)
 		if !ppu.isObj8x8() {
 			spriteHeight = 16
@@ -121,7 +114,6 @@ func (ppu *PPU) scanOAM() {
 				}
 			}
 		}
-		//log.Printf("[PPU] Sprites en la línea actual: %d", len(result)) // LOG
 		ppu.spritesOnCurrentLine = result
 		ppu.cycles -= 80
 		ppu.setMode(ModeVRAM)
@@ -130,7 +122,6 @@ func (ppu *PPU) scanOAM() {
 
 func (ppu *PPU) runHBlank() {
 	if ppu.isHBlankInterruptEnabled() {
-		//TODO: Request Interrupt HBlank
 		ppu.requestInterrupt(InterruptSTAT)
 	}
 	if ppu.cycles >= 204 {
@@ -175,10 +166,11 @@ func (ppu *PPU) updateCoincidenceFlag() {
 	}
 }
 func (ppu *PPU) runVRAM() {
+	//ppu.bus.Write(0xFF42, 0x00)
 	// Calculamos el número de ciclos basados en la posición de SCX y los sprites
 	var baseCycles = 172                              // valor base para el Modo 3
 	spriteCycles := len(ppu.spritesOnCurrentLine) * 2 // Cada sprite puede requerir más ciclos para la transferencia
-
+	ppu.pixelFIFO = ppu.pixelFIFO[:0]
 	if ppu.cycles < baseCycles+spriteCycles {
 		return
 	}
@@ -188,63 +180,98 @@ func (ppu *PPU) runVRAM() {
 	scx := ppu.bus.Read(SCXRegister)
 	scy := ppu.bus.Read(SCYRegister)
 	lcdc := ppu.bus.Read(LCDCRegister)
+	wx := ppu.bus.Read(WXRegister)
+	wy := ppu.bus.Read(WYRegister)
+	drawWindow := (lcdc&LCDCFlagWindowEnable) != 0 && int(ly) >= int(wy)
 
 	if int(ly) >= ScreenHeight {
-		//log.Printf("[PPU] Línea fuera de rango: LY=%d", ly)
 		ppu.cycles -= baseCycles + spriteCycles
 		ppu.setMode(ModeHBlank)
 		return
 	}
-	//log.Printf("[PPU] Renderizando línea LY=%d", ly)
 
 	bgTileMapAddr := uint16(0x9800)
 	if lcdc&LCDCFlagBGTileMap != 0 {
 		bgTileMapAddr = 0x9C00
 	}
 
-	tileDataAddr := uint16(0x8800)
+	//tileDataAddr := uint16(0x8800)
 	useSigned := true
 	if lcdc&LCDCFlagBGTileData != 0 {
-		tileDataAddr = 0x8000
+		//tileDataAddr = 0x8000
 		useSigned = false
 	}
 
 	for x := 0; x < ScreenWidth; x++ {
-		scrollX := uint16((uint16(x) + uint16(scx)) & 0xFF)
-		scrollY := uint16((uint16(ly) + uint16(scy)) & 0xFF)
+		var scrollX, scrollY uint16
+		var tileMapAddr uint16
 
-		tileX := scrollX / 8
-		tileY := scrollY / 8
-		tileIndexOffset := tileY*32 + tileX
-		tileIndex := ppu.bus.Read(bgTileMapAddr + tileIndexOffset)
+		if drawWindow && x >= int(wx)-7 {
+			// Dibujamos Window
+			tileMapAddr = 0x9800
+			if lcdc&LCDCFlagWindowTileMap != 0 {
+				tileMapAddr = 0x9C00
+			}
 
-		var tileAddr uint16
-		if useSigned {
-			tileAddr = tileDataAddr + uint16(int8(tileIndex))*16
+			windowY := uint16(ly) - uint16(wy)
+			windowX := uint16(x) - (uint16(wx) - 7)
+
+			tileX := windowX / 8
+			tileY := windowY / 8
+			tileIndexOffset := tileY*32 + tileX
+			tileIndex := ppu.bus.Read(tileMapAddr + tileIndexOffset)
+
+			var tileAddr uint16
+			if useSigned {
+				tileAddr = 0x9000 + uint16(int8(tileIndex))*16
+			} else {
+				tileAddr = 0x8000 + uint16(tileIndex)*16
+			}
+
+			row := (windowY % 8) * 2
+			byte1 := ppu.bus.Read(tileAddr + uint16(row))
+			byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
+			bit := 7 - (scrollX % 8)
+
+			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
+			palette := ppu.bus.Read(0xFF47)
+			color := (palette >> (colorID * 2)) & 0x03
+			ppu.addPixelToFIFO(getColorFromPalette(color))
+
 		} else {
-			tileAddr = tileDataAddr + uint16(tileIndex)*16
+			// Dibujamos Background
+			scrollX = uint16((uint16(x) + uint16(scx)))
+			scrollY = uint16((uint16(ly) + uint16(scy)))
+
+			tileX := (scrollX & 0xFF) / 8
+			tileY := (scrollY & 0xFF) / 8
+
+			tileIndexOffset := tileY*32 + tileX
+			tileIndex := ppu.bus.Read(bgTileMapAddr + tileIndexOffset)
+
+			var tileAddr uint16
+			if useSigned {
+				tileAddr = 0x9000 + uint16(int8(tileIndex))*16
+			} else {
+				tileAddr = 0x8000 + uint16(tileIndex)*16
+			}
+
+			row := (scrollY % 8) * 2
+			byte1 := ppu.bus.Read(tileAddr + uint16(row))
+			byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
+			bit := 7 - (scrollX % 8)
+
+			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
+			palette := ppu.bus.Read(0xFF47)
+			color := (palette >> (colorID * 2)) & 0x03
+			ppu.addPixelToFIFO(getColorFromPalette(color))
 		}
-
-		row := (scrollY % 8) * 2
-		byte1 := ppu.bus.Read(tileAddr + uint16(row))
-		byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
-		bit := 7 - (scrollX % 8)
-		//log.Printf("[PPU] ColorID: %02X, %02X bit %04X", byte1, byte2, bit)
-
-		colorID := ((byte2 >> bit) & 1 << 1) | ((byte1 >> bit) & 1)
-
-		palette := ppu.bus.Read(0xFF47)
-		color := (palette >> (colorID * 2)) & 0x03
-		//log.Printf("[PPU] ColorID: %d, Color: %02X (BG Palette: %02X)", colorID, color, palette)
-		ppu.addPixelToFIFO(getColorFromPalette(color))
-		//ppu.Framebuffer[getFramebufferIndex(x, int(ly))] = getColorFromPalette(color)
 	}
 
 	// Transferimos los píxeles de la FIFO al framebuffer
 	for x := 0; x < ScreenWidth; x++ {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
-	//log.Printf("[PPU] Línea %d renderizada y enviada a framebuffer", ly)
 	ppu.cycles -= baseCycles + spriteCycles
 	ppu.setMode(ModeHBlank)
 }
