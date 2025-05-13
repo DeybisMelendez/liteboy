@@ -378,10 +378,10 @@ func (cpu *CPU) Step() int {
 		return 1
 
 	case 0x58: // LD E,B
-		cpu.e = cpu.a
+		cpu.e = cpu.b
 		return 1
 	case 0x59: // LD E,C
-		cpu.e = cpu.a
+		cpu.e = cpu.c
 		return 1
 	case 0x5A: // LD E,D
 		cpu.e = cpu.d

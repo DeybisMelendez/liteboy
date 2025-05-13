@@ -1,19 +1,13 @@
 package cpu
 
-// RLCA
 func (cpu *CPU) rlca() {
 	carry := cpu.a >> 7
-	result := (cpu.a << 1) | carry
+	cpu.a = (cpu.a << 1) | carry
 
-	// Preserva Z, limpia N y H, actualiza C
-	cpu.f &= FlagZ
+	cpu.f = 0 // RLCA siempre limpia Z, N, H
 	if carry != 0 {
 		cpu.f |= FlagC
-	} else {
-		cpu.f &^= FlagC
 	}
-
-	cpu.a = result
 }
 
 // RRCA
@@ -29,20 +23,23 @@ func (cpu *CPU) rrca() {
 
 // RLA
 func (cpu *CPU) rla() {
+	// Guardamos el carry anterior
 	oldCarry := byte(0)
 	if cpu.f&FlagC != 0 {
 		oldCarry = 1
 	}
 
+	// Calculamos el nuevo carry desde el bit 7
 	newCarry := cpu.a >> 7
+
+	// Rotamos A a la izquierda, insertando el viejo carry
 	cpu.a = (cpu.a << 1) | oldCarry
 
-	// Preservar Z, limpiar N y H, actualizar C
-	cpu.f &= FlagZ
+	cpu.f = 0
+
+	// Establecemos el nuevo carry si corresponde
 	if newCarry != 0 {
 		cpu.f |= FlagC
-	} else {
-		cpu.f &^= FlagC
 	}
 }
 
