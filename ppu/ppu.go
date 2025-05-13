@@ -48,6 +48,7 @@ func NewPPU(b *bus.Bus) *PPU {
 func (ppu *PPU) addPixelToFIFO(pixel uint32) {
 	if len(ppu.pixelFIFO) < ppu.fifoSize {
 		ppu.pixelFIFO = append(ppu.pixelFIFO, pixel)
+		//log.Printf("[PPU] Pixel agregado a FIFO (len=%d)", len(ppu.pixelFIFO))
 	}
 }
 
@@ -57,6 +58,7 @@ func (ppu *PPU) popPixelFromFIFO(x, y int) {
 		pixel := ppu.pixelFIFO[0]
 		ppu.pixelFIFO = ppu.pixelFIFO[1:] // Elimina el primer píxel de la cola
 		ppu.Framebuffer[getFramebufferIndex(x, y)] = pixel
+		//log.Printf("[PPU] Pixel extraído de FIFO y escrito en (%d, %d)", x, y)
 	}
 }
 
@@ -69,7 +71,6 @@ func (ppu *PPU) getMode() byte {
 }
 
 func (ppu *PPU) Step(tCycles int) {
-
 	if !ppu.isLCDEnabled() {
 		ppu.bus.Write(LYRegister, 0)
 		ppu.setMode(ModeHBlank)
@@ -80,21 +81,23 @@ func (ppu *PPU) Step(tCycles int) {
 
 	switch ppu.getMode() {
 	case ModeOAM:
+		//log.Printf("[PPU] Modo OAM - Ciclos acumulados: %d", ppu.cycles) // LOG
 		ppu.scanOAM()
-
 	case ModeVRAM:
+		//log.Printf("[PPU] Modo VRAM (Modo 3) - Ciclos acumulados: %d", ppu.cycles) // LOG
 		ppu.runVRAM()
-
 	case ModeHBlank:
+		//log.Printf("[PPU] Modo HBlank - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		ppu.runHBlank()
-
 	case ModeVBlank:
+		//log.Printf("[PPU] Modo VBlank - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		ppu.runVBlank()
 	}
 }
 
 func (ppu *PPU) scanOAM() {
 	if ppu.cycles >= 80 {
+		//log.Printf("[PPU] Escaneando OAM - LY: %d", ppu.bus.Read(LYRegister)) // LOG
 		spriteHeight := byte(8)
 		if !ppu.isObj8x8() {
 			spriteHeight = 16
@@ -118,6 +121,7 @@ func (ppu *PPU) scanOAM() {
 				}
 			}
 		}
+		//log.Printf("[PPU] Sprites en la línea actual: %d", len(result)) // LOG
 		ppu.spritesOnCurrentLine = result
 		ppu.cycles -= 80
 		ppu.setMode(ModeVRAM)
@@ -133,8 +137,6 @@ func (ppu *PPU) runHBlank() {
 
 		if ppu.bus.Read(LYRegister) == 144 {
 			ppu.setMode(ModeVBlank)
-			//TODO: Request Interrupt VBlank
-			//TODO: Request Interrupt Stat
 			ppu.requestInterrupt(InterruptVBlank)
 			ppu.requestInterrupt(InterruptSTAT)
 		} else {
@@ -148,7 +150,6 @@ func (ppu *PPU) runHBlank() {
 
 func (ppu *PPU) runVBlank() {
 	if ppu.isVBlankInterruptEnabled() {
-		//TODO: Request interrupt Stat
 		ppu.requestInterrupt(InterruptSTAT)
 	}
 	if ppu.cycles >= 456 {
@@ -189,10 +190,12 @@ func (ppu *PPU) runVRAM() {
 	lcdc := ppu.bus.Read(LCDCRegister)
 
 	if int(ly) >= ScreenHeight {
+		//log.Printf("[PPU] Línea fuera de rango: LY=%d", ly)
 		ppu.cycles -= baseCycles + spriteCycles
 		ppu.setMode(ModeHBlank)
 		return
 	}
+	//log.Printf("[PPU] Renderizando línea LY=%d", ly)
 
 	bgTileMapAddr := uint16(0x9800)
 	if lcdc&LCDCFlagBGTileMap != 0 {
@@ -226,12 +229,13 @@ func (ppu *PPU) runVRAM() {
 		byte1 := ppu.bus.Read(tileAddr + uint16(row))
 		byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
 		bit := 7 - (scrollX % 8)
+		//log.Printf("[PPU] ColorID: %02X, %02X bit %04X", byte1, byte2, bit)
 
 		colorID := ((byte2 >> bit) & 1 << 1) | ((byte1 >> bit) & 1)
 
 		palette := ppu.bus.Read(0xFF47)
 		color := (palette >> (colorID * 2)) & 0x03
-
+		//log.Printf("[PPU] ColorID: %d, Color: %02X (BG Palette: %02X)", colorID, color, palette)
 		ppu.addPixelToFIFO(getColorFromPalette(color))
 		//ppu.Framebuffer[getFramebufferIndex(x, int(ly))] = getColorFromPalette(color)
 	}
@@ -240,7 +244,7 @@ func (ppu *PPU) runVRAM() {
 	for x := 0; x < ScreenWidth; x++ {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
-
+	//log.Printf("[PPU] Línea %d renderizada y enviada a framebuffer", ly)
 	ppu.cycles -= baseCycles + spriteCycles
 	ppu.setMode(ModeHBlank)
 }
@@ -252,7 +256,7 @@ func getFramebufferIndex(x, y int) int {
 func getColorFromPalette(color byte) uint32 {
 	switch color {
 	case 0:
-		return 0xFFFFFFFF // blanco
+		return 0xEEEEEEEE // blanco
 	case 1:
 		return 0xAAAAAAFF // gris claro
 	case 2:
@@ -260,6 +264,6 @@ func getColorFromPalette(color byte) uint32 {
 	case 3:
 		return 0x000000FF // negro
 	default:
-		return 0xFFFFFFFF
+		panic("No se reconoce color")
 	}
 }

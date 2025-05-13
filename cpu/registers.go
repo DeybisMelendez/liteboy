@@ -30,9 +30,9 @@ func (cpu *CPU) getE8() int8 {
 
 // n8
 func (cpu *CPU) getN8() byte {
-	e8 := cpu.bus.Read(cpu.pc)
+	n8 := cpu.bus.Read(cpu.pc)
 	cpu.pc++
-	return e8
+	return n8
 }
 
 // n16

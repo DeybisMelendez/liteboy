@@ -4,7 +4,7 @@ package cpu
 // Reference: https://rgbds.gbdev.io/docs/v0.9.2/gbz80.7
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/deybismelendez/liteboy/bus"
 )
@@ -25,7 +25,6 @@ type CPU struct {
 	bus       *bus.Bus
 }
 
-// Crea e inicializa una nueva CPU
 func NewCPU(bus *bus.Bus) *CPU {
 	cpu := &CPU{}
 	cpu.a = 0x01
@@ -52,7 +51,7 @@ const (
 )
 
 func (cpu *CPU) Trace(opcode byte) {
-	/*log.Printf("Opcode: %02X PC=%04X SP=%04X A=%02X B=%02X C=%02X D=%02X E=%02X F=%b H=%02X L=%02X",
-	opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)*/
-	fmt.Printf("\n0x%04X\t0x%02X", cpu.pc, opcode)
+	log.Printf("Opcode: %02X PC=%04X SP=%04X A=%02X B=%02X C=%02X D=%02X E=%02X F=%b H=%02X L=%02X",
+		opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)
+	//fmt.Printf("\n0x%04X\t0x%02X", cpu.pc, opcode)
 }

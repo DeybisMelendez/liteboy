@@ -766,11 +766,8 @@ func (cpu *CPU) Step() int {
 		return 3
 
 	case 0xCB: // PREFIX CB
-
-		// TODO: Implementar Prefix $CB
-		fmt.Printf("Instrucción no implementada: %02X\n", opcode)
-		panic("Detenido")
-		//return 4
+		cpu.runCB()
+		return 4
 
 	case 0xCC: // CALL Z, a16
 		addr := cpu.getA16()
@@ -866,7 +863,8 @@ func (cpu *CPU) Step() int {
 		cpu.rst16(0x18)
 		return 4
 	case 0xE0: // LDH (a8), A
-		cpu.bus.Write(0xFF00+uint16(cpu.getA8()), cpu.a)
+		addr := cpu.getA8()
+		cpu.bus.Write(addr, cpu.a)
 		return 3
 
 	case 0xE1: // POP HL
@@ -910,9 +908,12 @@ func (cpu *CPU) Step() int {
 	case 0xEE: // XOR A, n8
 		cpu.xor8(&cpu.a, cpu.getN8())
 		return 2
+	case 0xEF: // RST 28H
+		cpu.rst16(0x28)
+		return 4
 
 	case 0xF0: // LDH A, (a8)
-		cpu.a = cpu.bus.Read(0xFF00 + uint16(cpu.getA8()))
+		cpu.a = cpu.bus.Read(cpu.getA8())
 		return 3
 
 	case 0xF1: // POP AF
@@ -934,6 +935,10 @@ func (cpu *CPU) Step() int {
 	case 0xF6: // OR A, n8
 		cpu.or8(&cpu.a, cpu.getN8())
 		return 2
+
+	case 0xF7: // RST 30H
+		cpu.rst16(0x0030)
+		return 4
 
 	case 0xF8: // LD HL, SP+e8
 		cpu.ld_HL_SP_e8()

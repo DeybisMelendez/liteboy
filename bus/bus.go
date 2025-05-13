@@ -7,26 +7,32 @@ import (
 )
 
 type Bus struct {
-	cart  *cartridge.Cartridge
-	ROM00 *[0x4000]byte // 0x0000 - 0x3FFF
-	ROMNN *[0x4000]byte // 0x4000 - 0x7FFF
-	VRAM  [0x2000]byte  // 0x8000 - 0x9FFF
-	ERAM  *[0x2000]byte // 0xA000 - 0xBFFF
-	WRAM  [0x2000]byte  // 0xC000 - 0xDFFF
-	OAM   [0xA0]byte    // 0xFE00 - 0xFE9F
-	IO    [0x80]byte    // 0xFF00 - 0xFF7F
-	HRAM  [0x7F]byte    // 0xFF80 - 0xFFFE
-	IE    byte          // 0xFFFF
+	cart       *cartridge.Cartridge
+	BootROM    [0x100]byte
+	bootActive bool
+	ROM00      *[0x4000]byte // 0x0000 - 0x3FFF
+	ROMNN      *[0x4000]byte // 0x4000 - 0x7FFF
+	VRAM       [0x2000]byte  // 0x8000 - 0x9FFF
+	ERAM       *[0x2000]byte // 0xA000 - 0xBFFF
+	WRAM       [0x2000]byte  // 0xC000 - 0xDFFF
+	OAM        [0xA0]byte    // 0xFE00 - 0xFE9F
+	IO         [0x80]byte    // 0xFF00 - 0xFF7F
+	HRAM       [0x7F]byte    // 0xFF80 - 0xFFFE
+	IE         byte          // 0xFFFF
+
 }
 
 func NewBus(cart *cartridge.Cartridge) *Bus {
-	bus := Bus{
-		cart:  cart,
-		ROM00: &cart.ROM[0],
-		ROMNN: &cart.ROM[1],
-		ERAM:  &[0x2000]byte{},
+	bus := &Bus{
+		cart:       cart,
+		BootROM:    BootROM,
+		bootActive: true,
+		ROM00:      &cart.ROM[0],
+		ROMNN:      &cart.ROM[1],
+		ERAM:       &[0x2000]byte{},
 	}
-	// Estado del hardware después del BIOS
+
+	// Valores por defecto de los registros, igual que hiciste
 	bus.Write(0xFF00, 0xCF) // P1
 	bus.Write(0xFF01, 0x00) // SB
 	bus.Write(0xFF02, 0x7E) // SC
@@ -57,7 +63,7 @@ func NewBus(cart *cartridge.Cartridge) *Bus {
 	bus.Write(0xFF23, 0xBF)
 	bus.Write(0xFF24, 0x77)
 	bus.Write(0xFF25, 0xF3)
-	bus.Write(0xFF26, 0xF0) // On real hardware: 0xF0 if DMG, 0xF1 if CGB
+	bus.Write(0xFF26, 0xF0) // 0xF0 = DMG, 0xF1 = CGB
 
 	// PPU
 	bus.Write(0xFF40, 0x91) // LCDC
@@ -74,11 +80,14 @@ func NewBus(cart *cartridge.Cartridge) *Bus {
 	bus.Write(0xFF4B, 0x00) // WX
 
 	bus.Write(0xFFFF, 0x00) // IE
-	return &bus
+
+	return bus
 }
 
 func (b *Bus) Read(addr uint16) byte {
 	switch {
+	case addr < 0x100 && b.bootActive:
+		return b.BootROM[addr]
 	case addr < 0x4000:
 		return b.ROM00[addr]
 
@@ -102,7 +111,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.OAM[addr-0xFE00]
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Printf("Intento de lectura en zona no usable en %04X\n", addr)
+		log.Printf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
 		return 0xFF
 
 	case addr >= 0xFF00 && addr < 0xFF80:
@@ -123,6 +132,7 @@ func (b *Bus) Write(addr uint16, value byte) {
 	switch {
 	case addr < 0x8000:
 		log.Printf("Intento de escritura en ROM en %04X: %02X\n", addr, value)
+		return
 
 	case addr >= 0x8000 && addr < 0xA000:
 		b.VRAM[addr-0x8000] = value
@@ -144,6 +154,9 @@ func (b *Bus) Write(addr uint16, value byte) {
 		log.Printf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
 
 	case addr >= 0xFF00 && addr < 0xFF80:
+		if addr == 0xFF50 && value != 0 {
+			b.bootActive = false // Desactiva Boot ROM
+		}
 		b.IO[addr-0xFF00] = value
 
 	case addr >= 0xFF80 && addr < 0xFFFF:
@@ -153,6 +166,6 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.IE = value
 
 	default:
-		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
+		log.Panicf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
 	}
 }

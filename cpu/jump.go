@@ -9,16 +9,19 @@ func (cpu *CPU) ret() {
 }
 
 func (cpu *CPU) call16(addr uint16) {
-	cpu.sp -= 2
-	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF))
-	cpu.bus.Write(cpu.sp+1, byte(cpu.pc>>8))
+	cpu.sp -= 1
+	cpu.bus.Write(cpu.sp, byte(cpu.pc>>8)) // PC high byte
+	cpu.sp -= 1
+	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF)) // PC low byte
 	cpu.pc = addr
 }
 
+// TODO: call16 y rst16 son las mismas
 // reset, jump to fixed address
 func (cpu *CPU) rst16(addr uint16) {
-	cpu.sp -= 2
-	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF))
-	cpu.bus.Write(cpu.sp+1, byte(cpu.pc>>8))
+	cpu.sp -= 1
+	cpu.bus.Write(cpu.sp, byte(cpu.pc>>8)) // PC high byte
+	cpu.sp -= 1
+	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF)) // PC low byte
 	cpu.pc = addr
 }
