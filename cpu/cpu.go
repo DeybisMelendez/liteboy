@@ -16,13 +16,15 @@ type CPU struct {
 	d, e byte
 	h, l byte
 
-	pc        uint16 // Program Counter
-	sp        uint16 // Stack Pointer
-	halted    bool
-	Stopped   bool
-	ime       bool
-	enableIME bool
-	bus       *bus.Bus
+	pc           uint16 // Program Counter
+	sp           uint16 // Stack Pointer
+	halted       bool
+	Stopped      bool
+	ime          bool
+	enableIME    bool
+	divCounter   uint16
+	timerCounter int
+	bus          *bus.Bus
 }
 
 func NewCPU(bus *bus.Bus) *CPU {
@@ -40,6 +42,10 @@ func NewCPU(bus *bus.Bus) *CPU {
 	cpu.halted = false
 	cpu.Stopped = false
 	cpu.bus = bus
+	cpu.ime = false
+	cpu.enableIME = false
+	cpu.divCounter = 0
+	cpu.timerCounter = 0
 	return cpu
 }
 

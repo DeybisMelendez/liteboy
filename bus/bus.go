@@ -19,7 +19,6 @@ type Bus struct {
 	IO         [0x80]byte    // 0xFF00 - 0xFF7F
 	HRAM       [0x7F]byte    // 0xFF80 - 0xFFFE
 	IE         byte          // 0xFFFF
-
 }
 
 func NewBus(cart *cartridge.Cartridge) *Bus {
