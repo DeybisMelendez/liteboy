@@ -7,23 +7,19 @@ func (cpu *CPU) Step() int {
 	if cpu.halted {
 		if interruptsPending {
 			cpu.halted = false
-			if !cpu.ime {
-				// HALT bug: el siguiente opcode debe ejecutarse de nuevo
-				cpu.updateTimers(4)
-				return 1
-			}
 		} else {
 			cpu.updateTimers(4)
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
-			return 1
+			return 4
 		}
+
 	}
 
 	// Verificar si debe manejar interrupciones
 	if cpu.ime && interruptsPending {
 		cpu.handleInterrupt()
 		cpu.updateTimers(20)
-		return 5
+		return 20
 	}
 
 	// Interrupciones se habilitan después de la instrucción siguiente al EI
@@ -40,7 +36,7 @@ func (cpu *CPU) Step() int {
 	cycles := cpu.execute(opcode)
 
 	// Actualizar timers
-	cpu.updateTimers(cycles * 4)
+	cpu.updateTimers(cycles)
 
 	return cycles
 }
