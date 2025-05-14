@@ -29,9 +29,9 @@ func (cpu *CPU) pushPC(value byte) {
 	cpu.bus.Write(cpu.sp, value)
 }
 
-func (cpu *CPU) updateTimers(cycles int) {
+func (cpu *CPU) updateTimers(tcycles int) {
 	// --- DIV siempre avanza a 16384 Hz (cada 256 ciclos de CPU) ---
-	cpu.divCounter += uint16(cycles)
+	cpu.divCounter += uint16(tcycles)
 	if cpu.divCounter >= 256 {
 		cpu.divCounter -= 256
 		div := cpu.bus.Read(0xFF04)
@@ -60,7 +60,7 @@ func (cpu *CPU) updateTimers(cycles int) {
 	}
 
 	// Sumamos ciclos al timer interno
-	cpu.timerCounter += cycles
+	cpu.timerCounter += tcycles
 	for cpu.timerCounter >= threshold {
 		cpu.timerCounter -= threshold
 

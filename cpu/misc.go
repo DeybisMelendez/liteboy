@@ -17,6 +17,6 @@ func (cpu *CPU) ei() {
 	cpu.enableIME = true
 }
 func (cpu *CPU) reti() {
-	cpu.ret()
 	cpu.ime = true
+	cpu.ret()
 }

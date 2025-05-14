@@ -19,16 +19,17 @@ func (cpu *CPU) Step() int {
 		}
 	}
 
+	// Verificar si debe manejar interrupciones
+	if cpu.ime && interruptsPending {
+		cpu.handleInterrupt()
+		cpu.updateTimers(20)
+		return 5
+	}
+
 	// Interrupciones se habilitan después de la instrucción siguiente al EI
 	if cpu.enableIME {
 		cpu.ime = true
 		cpu.enableIME = false
-	}
-
-	// Verificar si debe manejar interrupciones
-	if cpu.ime && interruptsPending {
-		cpu.handleInterrupt()
-		return 5
 	}
 
 	// Fetch
@@ -38,7 +39,7 @@ func (cpu *CPU) Step() int {
 	// Ejecutar instrucción
 	cycles := cpu.execute(opcode)
 
-	// Actualizar timers (usa ciclos en T-cycles)
+	// Actualizar timers
 	cpu.updateTimers(cycles * 4)
 
 	return cycles

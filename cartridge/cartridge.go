@@ -69,6 +69,7 @@ func (cartridge *Cartridge) load(path string) {
 	cartridge.globalChecksum = uint16(rom[0x14E])<<8 | uint16(rom[0x14F])
 	fmt.Println("--- Cartucho cargado ---")
 	fmt.Println("Titulo:", cartridge.title)
+	fmt.Println("Tipo de cartucho:", cartridge.cartridgeType)
 }
 
 func (cartridge *Cartridge) PrintHeaderInfo() {
