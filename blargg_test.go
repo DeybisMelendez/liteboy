@@ -13,7 +13,7 @@ import (
 
 const maxCycles = 80_000_000 // Máximo de ciclos para cada test
 
-var testROMs = map[string]string{
+var cpu_instrs = map[string]string{
 	"01-special":            "roms/blargg/cpu_instrs/individual/01-special.gb",
 	"02-interrupts":         "roms/blargg/cpu_instrs/individual/02-interrupts.gb",
 	"03-op sp,hl":           "roms/blargg/cpu_instrs/individual/03-op sp,hl.gb",
@@ -25,12 +25,81 @@ var testROMs = map[string]string{
 	"09-op r,r":             "roms/blargg/cpu_instrs/individual/09-op r,r.gb",
 	"10-bit ops":            "roms/blargg/cpu_instrs/individual/10-bit ops.gb",
 	"11-op a,(hl)":          "roms/blargg/cpu_instrs/individual/11-op a,(hl).gb",
-	"instr_timing":          "roms/blargg/instr_timing/instr_timing.gb",
-	"interrupt_time":        "roms/blargg/interrupt_time/interrupt_time.gb",
+}
+var instr_timing = map[string]string{
+	"instr_timing": "roms/blargg/instr_timing/instr_timing.gb",
+}
+var interrupt_time = map[string]string{
+	"interrupt_time": "roms/blargg/interrupt_time/interrupt_time.gb",
+}
+var mem_timing = map[string]string{
+	"01-read_timing":   "roms/blargg/mem_timing/individual/01-read_timing.gb",
+	"02-write_timing":  "roms/blargg/mem_timing/individual/02-write_timing.gb",
+	"03-modify_timing": "roms/blargg/mem_timing/individual/03-modify_timing.gb",
+}
+var mem_timing_2 = map[string]string{
+	"01-read_timing":   "roms/blargg/mem_timing-2/rom_singles/01-read_timing.gb",
+	"02-write_timing":  "roms/blargg/mem_timing-2/rom_singles/02-write_timing.gb",
+	"03-modify_timing": "roms/blargg/mem_timing-2/rom_singles/03-modify_timing.gb",
+}
+var oam_bug = map[string]string{
+	"1-lcd_sync":        "roms/blargg/oam_bug/rom_singles/1-lcd_sync.gb",
+	"2-causes":          "roms/blargg/oam_bug/rom_singles/2-causes.gb",
+	"3-non_causes":      "roms/blargg/oam_bug/rom_singles/3-non_causes.gb",
+	"4-scanline_timing": "roms/blargg/oam_bug/rom_singles/4-scanline_timing.gb",
+	"5-timing_bug":      "roms/blargg/oam_bug/rom_singles/5-timing_bug.gb",
+	"6-timing_no_bug":   "roms/blargg/oam_bug/rom_singles/6-timing_no_bug.gb",
+	"7-timing_effect":   "roms/blargg/oam_bug/rom_singles/7-timing_effect.gb",
+	"8-instr_effect":    "roms/blargg/oam_bug/rom_singles/8-instr_effect.gb",
 }
 
-func TestBlarggCPUInstrs(t *testing.T) {
-	for name, path := range testROMs {
+func TestBlargg_cpu_instrs(t *testing.T) {
+	for name, path := range cpu_instrs {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}
+func TestBlargg_interrupt_time(t *testing.T) {
+	for name, path := range interrupt_time {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}
+func TestBlargg_instr_timing(t *testing.T) {
+	for name, path := range instr_timing {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}
+func TestBlargg_mem_timing(t *testing.T) {
+	for name, path := range mem_timing {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}
+func TestBlargg_mem_timing_2(t *testing.T) {
+	for name, path := range mem_timing_2 {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}
+func TestBlargg_oam_bug(t *testing.T) {
+	for name, path := range oam_bug {
 		t.Run(name, func(t *testing.T) {
 			if ok := runTestROM(path); !ok {
 				t.Errorf("Test %s failed", name)

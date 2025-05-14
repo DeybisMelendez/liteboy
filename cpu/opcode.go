@@ -69,9 +69,8 @@ func (cpu *CPU) execute(opcode byte) int {
 	case 0x10: // STOP
 		// STOP 0 instruction (detiene el reloj del sistema)
 		// El siguiente byte debe ser 0x00, pero normalmente se ignora
-		// TODO: Agregar la lógica del modo STOP reloj/divider
+		cpu.bus.Write(DIVRegister, 0x00)
 		cpu.Stopped = true
-		//panic("STOP todavía no está implementado")
 		return 4
 
 	case 0x11: // LD DE, n16

@@ -6,6 +6,11 @@ import (
 	"github.com/deybismelendez/liteboy/cartridge"
 )
 
+const (
+	DIVRegister  = 0xFF04
+	TIMARegister = 0xFF05
+)
+
 type Bus struct {
 	cart       *cartridge.Cartridge
 	BootROM    [0x100]byte
@@ -25,7 +30,7 @@ func NewBus(cart *cartridge.Cartridge) *Bus {
 	bus := &Bus{
 		cart:       cart,
 		BootROM:    BootROM,
-		bootActive: true,
+		bootActive: false,
 		ROM00:      &cart.ROM[0],
 		ROMNN:      &cart.ROM[1],
 		ERAM:       &[0x2000]byte{},
@@ -110,7 +115,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.OAM[addr-0xFE00]
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Panicf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
+		log.Printf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
 		return 0xFF
 
 	case addr >= 0xFF00 && addr < 0xFF80:
@@ -123,7 +128,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.IE
 
 	default:
-		log.Panicf("Intento de lectura fuera de rango en %04X\n", addr)
+		log.Printf("Intento de lectura fuera de rango en %04X\n", addr)
 		return 0xFF
 	}
 }
@@ -150,9 +155,15 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.OAM[addr-0xFE00] = value
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Panicf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
+		log.Printf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
 
 	case addr >= 0xFF00 && addr < 0xFF80:
+		// Si se intenta escribir en DIV se establece en 0
+		//https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
+		if addr == DIVRegister {
+			b.IO[addr-0xFF00] = 0x00
+			return
+		}
 		if addr == 0xFF50 && value != 0 {
 			b.bootActive = false // Desactiva Boot ROM
 		}
@@ -165,6 +176,6 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.IE = value
 
 	default:
-		log.Panicf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
+		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
 	}
 }
