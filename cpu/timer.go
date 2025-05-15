@@ -7,10 +7,10 @@ const (
 	TACRegister  = 0xFF07
 )
 
-func (cpu *CPU) updateTimers(tcycles int) {
-	cpu.extraCycles += tcycles
+func (cpu *CPU) updateTimers(tCycles int) {
+	cpu.tCycles += tCycles
 	// --- DIV siempre avanza a 16384 Hz (cada 256 ciclos de CPU) ---
-	cpu.divCounter += uint16(tcycles)
+	cpu.divCounter += uint16(tCycles)
 	if cpu.divCounter >= 256 {
 		cpu.divCounter -= 256
 		div := cpu.bus.Read(DIVRegister)
@@ -39,7 +39,7 @@ func (cpu *CPU) updateTimers(tcycles int) {
 	}
 
 	// Sumamos ciclos al timer interno
-	cpu.timerCounter += tcycles
+	cpu.timerCounter += tCycles
 	for cpu.timerCounter >= threshold {
 		cpu.timerCounter -= threshold
 

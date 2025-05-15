@@ -1,7 +1,8 @@
 package cpu
 
-// Step ejecuta una instrucción del procesador y devuelve los ciclos utilizados
+// Step ejecuta una instrucción del procesador y devuelve los t-ciclos utilizados
 func (cpu *CPU) Step() int {
+	cpu.tCycles = 0
 	interruptsPending := (cpu.bus.Read(0xFF0F) & cpu.bus.Read(0xFFFF)) != 0
 
 	if cpu.halted {
@@ -9,7 +10,6 @@ func (cpu *CPU) Step() int {
 			cpu.halted = false
 		} else {
 			cpu.updateTimers(4)
-			cpu.extraCycles = 0
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
 			return 4
 		}
@@ -20,7 +20,6 @@ func (cpu *CPU) Step() int {
 	if cpu.ime && interruptsPending {
 		cpu.handleInterrupt()
 		cpu.updateTimers(20)
-		cpu.extraCycles = 0
 		return 20
 	}
 
@@ -35,14 +34,8 @@ func (cpu *CPU) Step() int {
 	cpu.pc++
 
 	// Ejecutar instrucción
-	cycles := cpu.execute(opcode)
+	tCyclesToUpdate := cpu.execute(opcode)
+	cpu.updateTimers(tCyclesToUpdate)
 
-	// Actualizar timers
-	if cycles > 0 {
-		cpu.updateTimers(cycles)
-		cycles = cpu.extraCycles
-	}
-	cpu.extraCycles = 0
-
-	return cycles
+	return cpu.tCycles
 }
