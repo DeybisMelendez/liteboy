@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -10,8 +9,6 @@ import (
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
 )
-
-const maxCycles = 80_000_000 // Máximo de ciclos para cada test
 
 var cpu_instrs = map[string]string{
 	"01-special":            "roms/blargg/cpu_instrs/individual/01-special.gb",
@@ -85,21 +82,17 @@ func runTestROM(path string) bool {
 	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
 
-	cycles := 0
-	for cycles < maxCycles {
-		c := gameCPU.Step()
-		gamePPU.Step(c)
-		cycles += c
+	for range 20 {
+		for range 400_000 {
+			c := gameCPU.Step()
+			gamePPU.Step(c)
+		}
+		// Inspecciona el texto en pantalla (desde VRAM)
+		text := extractScreenText(gameBus)
+		if strings.Contains(text, "Passed") {
+			return true
+		}
 	}
-	// Inspecciona el texto en pantalla (desde VRAM)
-	text := extractScreenText(gameBus)
-	if strings.Contains(text, "Passed") {
-		return true
-	}
-	if strings.Contains(text, "Failed") {
-		return false
-	}
-	fmt.Println("Una prueba falló porque le falto ciclos")
 	return false // Timeout
 }
 
