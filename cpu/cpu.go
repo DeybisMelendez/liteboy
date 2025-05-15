@@ -62,3 +62,10 @@ func (cpu *CPU) Trace(opcode byte) {
 		opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)
 	//fmt.Printf("\n0x%04X\t0x%02X", cpu.pc, opcode)
 }
+
+func (cpu *CPU) GetRegisters() []byte {
+	return []byte{cpu.b, cpu.c, cpu.d, cpu.e, cpu.h, cpu.l}
+}
+func (cpu *CPU) GetOpcode() byte {
+	return cpu.bus.Read(cpu.pc)
+}
