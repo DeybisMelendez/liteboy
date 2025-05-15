@@ -11,7 +11,7 @@ func (cpu *CPU) Step() int {
 		} else {
 			cpu.updateTimers(4)
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
-			return 4
+			return cpu.tCycles
 		}
 
 	}
@@ -19,8 +19,7 @@ func (cpu *CPU) Step() int {
 	// Verificar si debe manejar interrupciones
 	if cpu.ime && interruptsPending {
 		cpu.handleInterrupt()
-		cpu.updateTimers(20)
-		return 20
+		return cpu.tCycles
 	}
 
 	// Interrupciones se habilitan después de la instrucción siguiente al EI

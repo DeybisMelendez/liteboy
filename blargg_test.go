@@ -29,9 +29,7 @@ var cpu_instrs = map[string]string{
 var instr_timing = map[string]string{
 	"instr_timing": "roms/blargg/instr_timing/instr_timing.gb",
 }
-var interrupt_time = map[string]string{
-	"interrupt_time": "roms/blargg/interrupt_time/interrupt_time.gb",
-}
+
 var mem_timing = map[string]string{
 	"01-read_timing":   "roms/blargg/mem_timing/individual/01-read_timing.gb",
 	"02-write_timing":  "roms/blargg/mem_timing/individual/02-write_timing.gb",
@@ -43,17 +41,6 @@ var mem_timing_2 = map[string]string{
 	"03-modify_timing": "roms/blargg/mem_timing-2/rom_singles/03-modify_timing.gb",
 }
 
-/*var oam_bug = map[string]string{
-	"1-lcd_sync":        "roms/blargg/oam_bug/rom_singles/1-lcd_sync.gb",
-	"2-causes":          "roms/blargg/oam_bug/rom_singles/2-causes.gb",
-	"3-non_causes":      "roms/blargg/oam_bug/rom_singles/3-non_causes.gb",
-	"4-scanline_timing": "roms/blargg/oam_bug/rom_singles/4-scanline_timing.gb",
-	"5-timing_bug":      "roms/blargg/oam_bug/rom_singles/5-timing_bug.gb",
-	"6-timing_no_bug":   "roms/blargg/oam_bug/rom_singles/6-timing_no_bug.gb",
-	"7-timing_effect":   "roms/blargg/oam_bug/rom_singles/7-timing_effect.gb",
-	"8-instr_effect":    "roms/blargg/oam_bug/rom_singles/8-instr_effect.gb",
-}*/
-
 func TestBlargg_cpu_instrs(t *testing.T) {
 	for name, path := range cpu_instrs {
 		t.Run(name, func(t *testing.T) {
@@ -63,15 +50,7 @@ func TestBlargg_cpu_instrs(t *testing.T) {
 		})
 	}
 }
-func TestBlargg_interrupt_time(t *testing.T) {
-	for name, path := range interrupt_time {
-		t.Run(name, func(t *testing.T) {
-			if ok := runTestROM(path); !ok {
-				t.Errorf("Test %s failed", name)
-			}
-		})
-	}
-}
+
 func TestBlargg_instr_timing(t *testing.T) {
 	for name, path := range instr_timing {
 		t.Run(name, func(t *testing.T) {
@@ -99,16 +78,6 @@ func TestBlargg_mem_timing_2(t *testing.T) {
 		})
 	}
 }
-
-/*func TestBlargg_oam_bug(t *testing.T) {
-	for name, path := range oam_bug {
-		t.Run(name, func(t *testing.T) {
-			if ok := runTestROM(path); !ok {
-				t.Errorf("Test %s failed", name)
-			}
-		})
-	}
-}*/
 
 func runTestROM(path string) bool {
 	cart := cartridge.NewCartridge(path)
@@ -154,3 +123,39 @@ func extractScreenText(b *bus.Bus) string {
 	}
 	return out.String()
 }
+
+/*
+	var interrupt_time = map[string]string{
+		"interrupt_time": "roms/blargg/interrupt_time/interrupt_time.gb",
+	}
+*/
+/*var oam_bug = map[string]string{
+	"1-lcd_sync":        "roms/blargg/oam_bug/rom_singles/1-lcd_sync.gb",
+	"2-causes":          "roms/blargg/oam_bug/rom_singles/2-causes.gb",
+	"3-non_causes":      "roms/blargg/oam_bug/rom_singles/3-non_causes.gb",
+	"4-scanline_timing": "roms/blargg/oam_bug/rom_singles/4-scanline_timing.gb",
+	"5-timing_bug":      "roms/blargg/oam_bug/rom_singles/5-timing_bug.gb",
+	"6-timing_no_bug":   "roms/blargg/oam_bug/rom_singles/6-timing_no_bug.gb",
+	"7-timing_effect":   "roms/blargg/oam_bug/rom_singles/7-timing_effect.gb",
+	"8-instr_effect":    "roms/blargg/oam_bug/rom_singles/8-instr_effect.gb",
+}*/
+
+/*func TestBlargg_interrupt_time(t *testing.T) {
+	for name, path := range interrupt_time {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}*/
+
+/*func TestBlargg_oam_bug(t *testing.T) {
+	for name, path := range oam_bug {
+		t.Run(name, func(t *testing.T) {
+			if ok := runTestROM(path); !ok {
+				t.Errorf("Test %s failed", name)
+			}
+		})
+	}
+}*/
