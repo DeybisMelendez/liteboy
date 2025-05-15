@@ -124,8 +124,8 @@ func (ppu *PPU) runHBlank() {
 	if ppu.isHBlankInterruptEnabled() {
 		ppu.requestInterrupt(InterruptSTAT)
 	}
-	if ppu.cycles >= 204 {
-
+	if ppu.cycles >= 204-len(ppu.spritesOnCurrentLine)*2 {
+		ppu.bus.Write(LYRegister, ppu.bus.Read(LYRegister)+1)
 		if ppu.bus.Read(LYRegister) == 144 {
 			ppu.setMode(ModeVBlank)
 			ppu.requestInterrupt(InterruptVBlank)
@@ -134,8 +134,7 @@ func (ppu *PPU) runHBlank() {
 			ppu.setMode(ModeOAM)
 		}
 		ppu.updateCoincidenceFlag()
-		ppu.bus.Write(LYRegister, ppu.bus.Read(LYRegister)+1)
-		ppu.cycles -= 204
+		ppu.cycles -= 204 - len(ppu.spritesOnCurrentLine)*2
 	}
 }
 

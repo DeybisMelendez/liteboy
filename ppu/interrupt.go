@@ -1,11 +1,11 @@
 package ppu
 
 const (
-	InterruptVBlank = 0
-	InterruptSTAT   = 1
-	InterruptTimer  = 2
-	InterruptSerial = 3
-	InterruptJoypad = 4
+	InterruptVBlank byte = 0
+	InterruptSTAT   byte = 1
+	InterruptTimer  byte = 2
+	InterruptSerial byte = 3
+	InterruptJoypad byte = 4
 )
 
 func (ppu *PPU) requestInterrupt(interruptBit byte) {

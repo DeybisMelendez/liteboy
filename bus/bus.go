@@ -165,6 +165,11 @@ func (b *Bus) Write(addr uint16, value byte) {
 			b.IO[addr-0xFF00] = 0x00
 			return
 		}
+		if addr == 0xFF46 {
+			b.IO[addr-0xFF00] = value
+			b.doDMATransfer(value)
+			return
+		}
 		if addr == 0xFF50 && value != 0 {
 			b.bootActive = false // Desactiva Boot ROM
 		}
@@ -178,5 +183,12 @@ func (b *Bus) Write(addr uint16, value byte) {
 
 	default:
 		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
+	}
+}
+func (b *Bus) doDMATransfer(value byte) {
+	source := uint16(value) << 8 // Dirección de origen base
+	for i := 0; i < 0xA0; i++ {
+		data := b.Read(source + uint16(i))
+		b.OAM[i] = data
 	}
 }
