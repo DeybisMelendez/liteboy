@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"unsafe"
 
 	"github.com/deybismelendez/liteboy/bus"
@@ -15,114 +17,104 @@ const (
 	ScreenWidth  = 160
 	ScreenHeight = 144
 	Scale        = 4
-	TargetFPS    = 60
 	TargetCycle  = 70224
 )
 
-/*func main() {
-	cart := cartridge.NewCartridge("roms/tetris.gb") // Usá una ROM de test si tenés
-	b := bus.NewBus(cart)
-	c := cpu.NewCPU(b)
-
-	reader := bufio.NewReader(os.Stdin)
-	step := 0
-
-	for {
-		c.Step()
-
-		fmt.Print("\nPresioná ENTER para continuar o 'q' + ENTER para salir: ")
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-
-		if input == "q" {
-			fmt.Println("Saliendo del paso a paso.")
-			break
-		}
-
-		step++
-	}
-}*/
-
-func main() {
+func initSDL() (*sdl.Window, *sdl.Renderer, *sdl.Texture) {
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
-		log.Fatalf("No se pudo inicializar SDL: %v", err)
+		log.Fatalf("Error al iniciar SDL: %v", err)
 	}
-	defer sdl.Quit()
 
 	window, err := sdl.CreateWindow("LiteBoy Emulator",
 		sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED,
 		ScreenWidth*Scale, ScreenHeight*Scale,
 		sdl.WINDOW_SHOWN)
 	if err != nil {
-		log.Fatalf("No se pudo crear la ventana: %v", err)
+		sdl.Quit()
+		log.Fatalf("Error al crear ventana: %v", err)
 	}
-	defer window.Destroy()
 
 	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 	if err != nil {
-		log.Fatalf("No se pudo crear el renderer: %v", err)
+		window.Destroy()
+		sdl.Quit()
+		log.Fatalf("Error al crear renderer: %v", err)
 	}
-	defer renderer.Destroy()
 
-	texture, err := renderer.CreateTexture(sdl.PIXELFORMAT_RGBA8888,
-		sdl.TEXTUREACCESS_STREAMING, ScreenWidth, ScreenHeight)
+	texture, err := renderer.CreateTexture(
+		sdl.PIXELFORMAT_RGBA8888,
+		sdl.TEXTUREACCESS_STREAMING,
+		ScreenWidth, ScreenHeight,
+	)
 	if err != nil {
-		log.Fatalf("No se pudo crear la textura: %v", err)
+		renderer.Destroy()
+		window.Destroy()
+		sdl.Quit()
+		log.Fatalf("Error al crear textura: %v", err)
 	}
-	defer texture.Destroy()
-	cart := cartridge.NewCartridge("roms/blargg/interrupt_time/interrupt_time.gb")
 
-	gameBus := bus.NewBus(cart)
-	gameCPU := cpu.NewCPU(gameBus)
-	gamePPU := ppu.NewPPU(gameBus)
+	return window, renderer, texture
+}
 
+func loadROM(path string) *cartridge.Cartridge {
+	cart := cartridge.NewCartridge(path)
+	if cart == nil {
+		log.Fatalf("Error al cargar ROM: %s", path)
+	}
+	return cart
+}
+
+func mainLoop(cpu *cpu.CPU, ppu *ppu.PPU, renderer *sdl.Renderer, texture *sdl.Texture) {
 	cycleCount := 0
-	//lastFPSUpdate := time.Now()
-	//frames := 0
-	//frameDelay := time.Second / TargetFPS
-
 	running := true
-	for running {
-		//start := time.Now()
 
+	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
+			if _, ok := event.(*sdl.QuitEvent); ok {
 				running = false
 			}
 		}
 
 		if cycleCount >= TargetCycle {
 			cycleCount -= TargetCycle
-			//frames++
-			//fmt.Println("Frame:", frames)
 
-			err := texture.Update(nil, unsafe.Pointer(&gamePPU.Framebuffer[0]), ScreenWidth*4)
+			err := texture.Update(nil, unsafe.Pointer(&ppu.Framebuffer[0]), ScreenWidth*4)
 			if err != nil {
-				log.Printf("Error al actualizar la textura: %v", err)
+				log.Printf("Error al actualizar textura: %v", err)
 			}
 
 			renderer.Clear()
-			err = renderer.Copy(texture, nil, nil)
-			if err != nil {
-				log.Printf("Error al copiar la textura: %v", err)
+			if err := renderer.Copy(texture, nil, nil); err != nil {
+				log.Printf("Error al copiar textura: %v", err)
 			}
 			renderer.Present()
 		} else {
-			cycles := gameCPU.Step()
+			cycles := cpu.Step()
 			cycleCount += cycles
-			gamePPU.Step(cycles)
+			ppu.Step(cycles)
 		}
-
-		/*if time.Since(lastFPSUpdate) >= time.Second {
-			log.Printf("[FPS] %d frames/s", frames)
-			frames = 0
-			lastFPSUpdate = time.Now()
-		}
-
-		elapsed := time.Since(start)
-		if elapsed < frameDelay {
-			sdl.Delay(uint32((frameDelay - elapsed).Milliseconds()))
-		}*/
 	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Uso: go run main.go <path_a_la_rom.gb>")
+		return
+	}
+
+	romPath := os.Args[1]
+	cart := loadROM(romPath)
+	gameBus := bus.NewBus(cart)
+	gameCPU := cpu.NewCPU(gameBus)
+	gamePPU := ppu.NewPPU(gameBus)
+
+	window, renderer, texture := initSDL()
+	defer func() {
+		texture.Destroy()
+		renderer.Destroy()
+		window.Destroy()
+		sdl.Quit()
+	}()
+
+	mainLoop(gameCPU, gamePPU, renderer, texture)
 }
