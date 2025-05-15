@@ -8,6 +8,7 @@ const (
 )
 
 func (cpu *CPU) updateTimers(tcycles int) {
+	cpu.extraCycles += tcycles
 	// --- DIV siempre avanza a 16384 Hz (cada 256 ciclos de CPU) ---
 	cpu.divCounter += uint16(tcycles)
 	if cpu.divCounter >= 256 {
@@ -20,10 +21,10 @@ func (cpu *CPU) updateTimers(tcycles int) {
 	tac := cpu.bus.Read(TACRegister)
 
 	timerEnabled := tac&0x04 != 0
+
 	if !timerEnabled {
 		return
 	}
-
 	// Obtenemos el número de ciclos por incremento según TAC bits 1-0
 	var threshold int
 	switch tac & 0x03 {

@@ -70,8 +70,7 @@ func main() {
 		log.Fatalf("No se pudo crear la textura: %v", err)
 	}
 	defer texture.Destroy()
-	cart := cartridge.NewCartridge("roms/games/zelda.gb")
-	//cart := cartridge.NewCartridge("roms/mooneye/acceptance/intr_timing.gb")
+	cart := cartridge.NewCartridge("roms/games/tetris.gb")
 
 	gameBus := bus.NewBus(cart)
 	gameCPU := cpu.NewCPU(gameBus)

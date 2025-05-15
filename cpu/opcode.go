@@ -234,15 +234,16 @@ func (cpu *CPU) execute(opcode byte) int {
 
 	case 0x34: // INC (HL)
 		cpu.incHL()
-		return 12
+		return 8
 
 	case 0x35: // DEC (HL)
 		cpu.decHL()
-		return 12
+		return 8
 
 	case 0x36: // LD (HL), n8
+		cpu.updateTimers(4)
 		cpu.bus.Write(cpu.getHL(), cpu.getN8())
-		return 12
+		return 8
 
 	case 0x37: // SCF (Set Carry Flag)
 		cpu.scf()
@@ -848,8 +849,9 @@ func (cpu *CPU) execute(opcode byte) int {
 		cpu.rst16(0x18)
 		return 16
 	case 0xE0: // LDH (a8), A
+		cpu.updateTimers(4)
 		cpu.bus.Write(cpu.getA8(), cpu.a)
-		return 12
+		return 8
 
 	case 0xE1: // POP HL
 		cpu.pop16(cpu.ldHL)
@@ -889,8 +891,9 @@ func (cpu *CPU) execute(opcode byte) int {
 		return 4
 
 	case 0xEA: // LD (a16), A
+		cpu.updateTimers(8)
 		cpu.bus.Write(cpu.getA16(), cpu.a)
-		return 16
+		return 8
 
 	case 0xEE: // XOR A, n8
 		cpu.xor8(&cpu.a, cpu.getN8())
@@ -900,8 +903,9 @@ func (cpu *CPU) execute(opcode byte) int {
 		return 16
 
 	case 0xF0: // LDH A, (a8)
+		cpu.updateTimers(4)
 		cpu.a = cpu.bus.Read(cpu.getA8())
-		return 12
+		return 8
 
 	case 0xF1: // POP AF
 		cpu.popAF()
@@ -936,8 +940,9 @@ func (cpu *CPU) execute(opcode byte) int {
 		return 8
 
 	case 0xFA: // LD A, (a16)
+		cpu.updateTimers(8)
 		cpu.a = cpu.bus.Read(cpu.getA16())
-		return 16
+		return 8
 
 	case 0xFB: // EI
 		cpu.ei()

@@ -62,7 +62,7 @@ func (cpu *CPU) incHL() {
 	} else {
 		cpu.f &^= FlagH
 	}
-
+	cpu.updateTimers(4)
 	cpu.bus.Write(addr, result)
 }
 
@@ -84,7 +84,7 @@ func (cpu *CPU) decHL() {
 	} else {
 		cpu.f &^= FlagH
 	}
-
+	cpu.updateTimers(4)
 	cpu.bus.Write(addr, result)
 }
 

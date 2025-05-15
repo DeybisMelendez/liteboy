@@ -24,6 +24,7 @@ type CPU struct {
 	enableIME    bool
 	divCounter   uint16
 	timerCounter int
+	extraCycles  int
 	bus          *bus.Bus
 }
 

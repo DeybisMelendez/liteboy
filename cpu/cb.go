@@ -26,10 +26,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x06: // RLC (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.rlc(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x07: // RLC A
 		cpu.a = cpu.rlc(cpu.a)
 		return 8
@@ -54,10 +56,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x0E: // RRC (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.rrc(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x0F: // RRC A
 		cpu.a = cpu.rrc(cpu.a)
 		return 8
@@ -81,10 +85,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x16: // RL (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.rl(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x17: // RL A
 		cpu.a = cpu.rl(cpu.a)
 		return 8
@@ -109,10 +115,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x1E: // RR (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.rr(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x1F: // RR A
 		cpu.a = cpu.rr(cpu.a)
 		return 8
@@ -136,10 +144,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x26: // SLA (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.sla(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x27: // SLA A
 		cpu.a = cpu.sla(cpu.a)
 		return 8
@@ -164,10 +174,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x2E: // SRA (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.sra(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x2F: // SRA A
 		cpu.a = cpu.sra(cpu.a)
 		return 8
@@ -191,10 +203,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x36: // SWAP (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.swap(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x37: // SWAP A
 		cpu.a = cpu.swap(cpu.a)
 		return 8
@@ -219,10 +233,12 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x3E: // SRL (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		value = cpu.srl(value)
+		cpu.updateTimers(4)
 		cpu.bus.Write(addr, value)
-		return 16
+		return 8
 	case 0x3F: // SRL A
 		cpu.a = cpu.srl(cpu.a)
 		return 8
@@ -247,9 +263,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x46: // BIT 0, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(0, value)
-		return 12
+		return 8
 	case 0x47: // BIT 0, A
 		cpu.bit(0, cpu.a)
 		return 8
@@ -274,9 +291,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x4E: // BIT 1, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(1, value)
-		return 12
+		return 8
 	case 0x4F: // BIT 1, A
 		cpu.bit(1, cpu.a)
 		return 8
@@ -300,9 +318,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x56: // BIT 2, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(2, value)
-		return 12
+		return 8
 	case 0x57: // BIT 2, A
 		cpu.bit(2, cpu.a)
 		return 8
@@ -327,9 +346,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x5E: // BIT 3, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(3, value)
-		return 12
+		return 8
 	case 0x5F: // BIT 3, A
 		cpu.bit(3, cpu.a)
 		return 8
@@ -353,9 +373,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x66: // BIT 4, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(4, value)
-		return 12
+		return 8
 	case 0x67: // BIT 4, A
 		cpu.bit(4, cpu.a)
 		return 8
@@ -380,9 +401,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x6E: // BIT 5, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(5, value)
-		return 12
+		return 8
 	case 0x6F: // BIT 5, A
 		cpu.bit(5, cpu.a)
 		return 8
@@ -406,9 +428,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x76: // BIT 6, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(6, value)
-		return 12
+		return 8
 	case 0x77: // BIT 6, A
 		cpu.bit(6, cpu.a)
 		return 8
@@ -433,9 +456,10 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x7E: // BIT 7, (HL)
 		addr := cpu.getHL()
+		cpu.updateTimers(4)
 		value := cpu.bus.Read(addr)
 		cpu.bit(7, value)
-		return 12
+		return 8
 	case 0x7F: // BIT 7, A
 		cpu.bit(7, cpu.a)
 		return 8
@@ -460,8 +484,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x86:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(0, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(0, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 
 	case 0x87:
 		cpu.a = cpu.res(0, cpu.a)
@@ -488,8 +515,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x8E:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(1, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(1, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0x8F:
 		cpu.a = cpu.res(1, cpu.a)
 		return 8
@@ -515,8 +545,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x96:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(2, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(2, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0x97:
 		cpu.a = cpu.res(2, cpu.a)
 		return 8
@@ -542,8 +575,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0x9E:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(3, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(3, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0x9F:
 		cpu.a = cpu.res(3, cpu.a)
 		return 8
@@ -569,8 +605,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xA6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(4, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(4, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xA7:
 		cpu.a = cpu.res(4, cpu.a)
 		return 8
@@ -596,8 +635,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xAE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(5, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(5, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xAF:
 		cpu.a = cpu.res(5, cpu.a)
 		return 8
@@ -623,8 +665,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xB6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(6, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(6, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xB7:
 		cpu.a = cpu.res(6, cpu.a)
 		return 8
@@ -650,8 +695,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xBE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.res(7, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.res(7, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xBF:
 		cpu.a = cpu.res(7, cpu.a)
 		return 8
@@ -676,8 +724,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xC6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(0, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(0, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xC7:
 		cpu.a = cpu.set(0, cpu.a)
 		return 8
@@ -703,8 +754,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xCE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(1, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(1, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xCF:
 		cpu.a = cpu.set(1, cpu.a)
 		return 8
@@ -730,8 +784,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xD6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(2, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(2, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xD7:
 		cpu.a = cpu.set(2, cpu.a)
 		return 8
@@ -757,8 +814,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xDE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(3, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(3, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xDF:
 		cpu.a = cpu.set(3, cpu.a)
 		return 8
@@ -784,8 +844,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xE6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(4, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(4, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xE7:
 		cpu.a = cpu.set(4, cpu.a)
 		return 8
@@ -811,8 +874,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xEE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(5, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(5, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xEF:
 		cpu.a = cpu.set(5, cpu.a)
 		return 8
@@ -838,8 +904,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xF6:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(6, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(6, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xF7:
 		cpu.a = cpu.set(6, cpu.a)
 		return 8
@@ -865,8 +934,11 @@ func (cpu *CPU) runCB() int {
 		return 8
 	case 0xFE:
 		addr := cpu.getHL()
-		cpu.bus.Write(addr, cpu.set(7, cpu.bus.Read(addr)))
-		return 16
+		cpu.updateTimers(4)
+		b := cpu.set(7, cpu.bus.Read(addr))
+		cpu.updateTimers(4)
+		cpu.bus.Write(addr, b)
+		return 8
 	case 0xFF:
 		cpu.a = cpu.set(7, cpu.a)
 		return 8

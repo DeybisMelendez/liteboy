@@ -9,6 +9,7 @@ func (cpu *CPU) Step() int {
 			cpu.halted = false
 		} else {
 			cpu.updateTimers(4)
+			cpu.extraCycles = 0
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
 			return 4
 		}
@@ -19,6 +20,7 @@ func (cpu *CPU) Step() int {
 	if cpu.ime && interruptsPending {
 		cpu.handleInterrupt()
 		cpu.updateTimers(20)
+		cpu.extraCycles = 0
 		return 20
 	}
 
@@ -36,7 +38,11 @@ func (cpu *CPU) Step() int {
 	cycles := cpu.execute(opcode)
 
 	// Actualizar timers
-	cpu.updateTimers(cycles)
+	if cycles > 0 {
+		cpu.updateTimers(cycles)
+		cycles = cpu.extraCycles
+	}
+	cpu.extraCycles = 0
 
 	return cycles
 }

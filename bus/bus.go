@@ -9,6 +9,7 @@ import (
 const (
 	DIVRegister  = 0xFF04
 	TIMARegister = 0xFF05
+	TACRegister  = 0xFF07
 )
 
 type Bus struct {
