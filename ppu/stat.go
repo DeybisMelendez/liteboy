@@ -13,8 +13,8 @@ func (ppu *PPU) isLYCInterruptEnabled() bool {
 	return ppu.bus.Read(STATRegister)&0x40 != 0
 }
 
-func (s STAT) IsOAMInterruptEnabled() bool { //TODO: Revisar este interrupt
-	return s&0x20 != 0
+func (ppu *PPU) IsOAMInterruptEnabled() bool {
+	return ppu.bus.Read(STATRegister)&0x20 != 0
 }
 
 func (ppu *PPU) isVBlankInterruptEnabled() bool {
@@ -23,11 +23,6 @@ func (ppu *PPU) isVBlankInterruptEnabled() bool {
 
 func (ppu *PPU) isHBlankInterruptEnabled() bool {
 	return ppu.bus.Read(STATRegister)&0x08 != 0
-}
-
-// Coincidence Flag: LY == LYC
-func (ppu *PPU) isCoincidenceFlagSet() bool {
-	return ppu.bus.Read(STATRegister)&0x04 != 0
 }
 
 func (ppu *PPU) setCoincidenceFlag(set bool) {
