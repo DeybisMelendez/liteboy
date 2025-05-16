@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/deybismelendez/liteboy/bus"
+	"github.com/deybismelendez/liteboy/ppu"
 )
 
 // Representa la CPU del Game Boy DMG
@@ -26,9 +27,10 @@ type CPU struct {
 	timerCounter int
 	tCycles      int
 	bus          *bus.Bus
+	ppu          *ppu.PPU
 }
 
-func NewCPU(bus *bus.Bus) *CPU {
+func NewCPU(bus *bus.Bus, ppu *ppu.PPU) *CPU {
 	cpu := &CPU{}
 	cpu.a = 0x01
 	cpu.f = 0xB0
@@ -47,6 +49,7 @@ func NewCPU(bus *bus.Bus) *CPU {
 	cpu.enableIME = false
 	cpu.divCounter = 0
 	cpu.timerCounter = 0
+	cpu.ppu = ppu
 	return cpu
 }
 
@@ -60,7 +63,6 @@ const (
 func (cpu *CPU) Trace(opcode byte) {
 	log.Printf("Opcode: %02X PC=%04X SP=%04X A=%02X B=%02X C=%02X D=%02X E=%02X F=%b H=%02X L=%02X",
 		opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)
-	//fmt.Printf("\n0x%04X\t0x%02X", cpu.pc, opcode)
 }
 
 func (cpu *CPU) GetRegisters() []byte {

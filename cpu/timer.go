@@ -9,6 +9,7 @@ const (
 
 func (cpu *CPU) updateTimers(tCycles int) {
 	cpu.tCycles += tCycles
+	cpu.ppu.Step(tCycles)
 	// --- DIV siempre avanza a 16384 Hz (cada 256 ciclos de CPU) ---
 	cpu.divCounter += uint16(tCycles)
 	if cpu.divCounter >= 256 {

@@ -90,9 +90,6 @@ func (ppu *PPU) Step(tCycles int) {
 }
 
 func (ppu *PPU) scanOAM() {
-	if ppu.IsOAMInterruptEnabled() {
-		ppu.requestInterrupt(InterruptSTAT)
-	}
 	if ppu.cycles >= 80 {
 		spriteHeight := byte(8)
 		if !ppu.isObj8x8() {
@@ -168,102 +165,113 @@ func (ppu *PPU) updateCoincidenceFlag() {
 	}
 }
 func (ppu *PPU) runVRAM() {
-	// Ciclos mínimos para entrar a Modo 3
-	const baseCycles = 172
-	spriteCycles := len(ppu.spritesOnCurrentLine) * 2
-	totalCycles := baseCycles + spriteCycles
-
-	// No hagas nada hasta completar Modo 3
-	if ppu.cycles < totalCycles {
+	// Calculamos el número de ciclos basados en la posición de SCX y los sprites
+	var baseCycles = 172                              // valor base para el Modo 3
+	spriteCycles := len(ppu.spritesOnCurrentLine) * 2 // Cada sprite puede requerir más ciclos para la transferencia
+	ppu.pixelFIFO = ppu.pixelFIFO[:0]
+	if ppu.cycles < baseCycles+spriteCycles {
 		return
 	}
 
-	ly := int(ppu.bus.Read(LYRegister))   // Línea actual 0–143
-	scx := int(ppu.bus.Read(SCXRegister)) // Scroll X 0–255
-	scy := int(ppu.bus.Read(SCYRegister)) // Scroll Y 0–255
+	// Procedemos con el renderizado de VRAM...
+	ly := ppu.bus.Read(LYRegister)
+	scx := ppu.bus.Read(SCXRegister)
+	scy := ppu.bus.Read(SCYRegister)
 	lcdc := ppu.bus.Read(LCDCRegister)
-	wx := int(ppu.bus.Read(WXRegister)) // Window X+7
-	wy := int(ppu.bus.Read(WYRegister)) // Window Y
-	bgTileMap := uint16(0x9800)
-	if lcdc&LCDCFlagBGTileMap != 0 {
-		bgTileMap = 0x9C00
+	wx := ppu.bus.Read(WXRegister)
+	wy := ppu.bus.Read(WYRegister)
+	drawWindow := (lcdc&LCDCFlagWindowEnable) != 0 && int(ly) >= int(wy)
+
+	if int(ly) >= ScreenHeight {
+		ppu.cycles -= baseCycles + spriteCycles
+		ppu.setMode(ModeHBlank)
+		return
 	}
-	useSigned := (lcdc & LCDCFlagBGTileData) == 0 // modo 8800 o 8000
 
-	// Para cada píxel de la línea...
-	for px := 0; px < ScreenWidth; px++ {
-		var tileX, tileY, tileMapAddr uint16
-		var inWindow bool
+	bgTileMapAddr := uint16(0x9800)
+	if lcdc&LCDCFlagBGTileMap != 0 {
+		bgTileMapAddr = 0x9C00
+	}
 
-		// ¿Se dibuja window aquí?
-		if lcdc&LCDCFlagWindowEnable != 0 &&
-			ly >= wy && px >= wx-7 {
-			inWindow = true
-			// Coordenadas dentro de la ventana
-			tileX = uint16(px-(wx-7)) / 8
-			// Contador Y interno de ventana
-			// (se reinicia en VBlank y sólo crece cuando entra)
-			windowLine := ly - wy
-			tileY = uint16(windowLine) / 8
+	//tileDataAddr := uint16(0x8800)
+	useSigned := true
+	if lcdc&LCDCFlagBGTileData != 0 {
+		//tileDataAddr = 0x8000
+		useSigned = false
+	}
+
+	for x := 0; x < ScreenWidth; x++ {
+		var scrollX, scrollY uint16
+		var tileMapAddr uint16
+
+		if drawWindow && x >= int(wx)-7 {
+			// Dibujamos Window
 			tileMapAddr = 0x9800
 			if lcdc&LCDCFlagWindowTileMap != 0 {
 				tileMapAddr = 0x9C00
 			}
+
+			windowY := uint16(ly) - uint16(wy)
+			windowX := uint16(x) - (uint16(wx) - 7)
+
+			tileX := windowX / 8
+			tileY := windowY / 8
+			tileIndexOffset := tileY*32 + tileX
+			tileIndex := ppu.bus.Read(tileMapAddr + tileIndexOffset)
+
+			var tileAddr uint16
+			if useSigned {
+				tileAddr = 0x9000 + uint16(int8(tileIndex))*16
+			} else {
+				tileAddr = 0x8000 + uint16(tileIndex)*16
+			}
+
+			row := (windowY % 8) * 2
+			byte1 := ppu.bus.Read(tileAddr + uint16(row))
+			byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
+			bit := 7 - (scrollX % 8)
+
+			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
+			palette := ppu.bus.Read(0xFF47)
+			color := (palette >> (colorID * 2)) & 0x03
+			ppu.addPixelToFIFO(getColorFromPalette(color))
+
 		} else {
-			// Background scrolling normal
-			scrollX := (px + scx) & 0xFF // wrap-around 256 px
-			scrollY := (ly + scy) & 0xFF
-			tileX = uint16(scrollX) / 8
-			tileY = uint16(scrollY) / 8
-			tileMapAddr = bgTileMap
+			// Dibujamos Background
+			scrollX = uint16((uint16(x) + uint16(scx)))
+			scrollY = uint16((uint16(ly) + uint16(scy)))
+
+			tileX := (scrollX & 0xFF) / 8
+			tileY := (scrollY & 0xFF) / 8
+
+			tileIndexOffset := tileY*32 + tileX
+			tileIndex := ppu.bus.Read(bgTileMapAddr + tileIndexOffset)
+
+			var tileAddr uint16
+			if useSigned {
+				tileAddr = 0x9000 + uint16(int8(tileIndex))*16
+			} else {
+				tileAddr = 0x8000 + uint16(tileIndex)*16
+			}
+
+			row := (scrollY % 8) * 2
+			byte1 := ppu.bus.Read(tileAddr + uint16(row))
+			byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
+			bit := 7 - (scrollX % 8)
+
+			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
+			palette := ppu.bus.Read(0xFF47)
+			color := (palette >> (colorID * 2)) & 0x03
+			ppu.addPixelToFIFO(getColorFromPalette(color))
 		}
-
-		// Offset dentro del tile map (32 cols)
-		mapOffset := tileY*32 + tileX
-		tileIndex := ppu.bus.Read(tileMapAddr + mapOffset)
-
-		// Dirección base de datos de tile
-		var tileAddr uint16
-		if useSigned {
-			tileAddr = 0x9000 + uint16(int8(tileIndex))*16
-		} else {
-			tileAddr = 0x8000 + uint16(tileIndex)*16
-		}
-
-		// Cálculo de fila dentro del tile
-		var rowY int
-		if inWindow {
-			rowY = (ly - wy) % 8
-		} else {
-			rowY = ((ly + scy) & 0xFF) % 8
-		}
-		addr := tileAddr + uint16(rowY*2)
-		byte1 := ppu.bus.Read(addr)
-		byte2 := ppu.bus.Read(addr + 1)
-
-		// bit de píxel dentro del byte
-		var bitX int
-		if inWindow {
-			bitX = 7 - ((px - (wx - 7)) % 8)
-		} else {
-			bitX = 7 - ((px + scx) & 7)
-		}
-
-		// Construcción del color final
-		colorID := (((byte2 >> bitX) & 1) << 1) | ((byte1 >> bitX) & 1)
-		palette := ppu.bus.Read(0xFF47)
-		color := (palette >> (colorID * 2)) & 0x03
-		ppu.addPixelToFIFO(getColorFromPalette(color))
 	}
 
-	// Vuelca FIFO al framebuffer y renderiza sprites
+	// Transferimos los píxeles de la FIFO al framebuffer
 	for x := 0; x < ScreenWidth; x++ {
-		ppu.popPixelFromFIFO(x, int(ppu.bus.Read(LYRegister)))
+		ppu.popPixelFromFIFO(x, int(ly))
 	}
 	ppu.renderSprites()
-
-	// Ajusta ciclos y pasa a HBlank
-	ppu.cycles -= totalCycles
+	ppu.cycles -= baseCycles + spriteCycles
 	ppu.setMode(ModeHBlank)
 }
 

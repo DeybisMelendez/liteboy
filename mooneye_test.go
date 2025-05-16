@@ -81,13 +81,14 @@ func TestMooneyeAcceptance(t *testing.T) {
 func runMooneyeTestROM(path string) bool {
 	cart := cartridge.NewCartridge(path)
 	gameBus := bus.NewBus(cart)
-	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gamePPU)
 
 	for range 1_000_000 {
 		opcode := gameCPU.GetOpcode()
-		c := gameCPU.Step()
-		gamePPU.Step(c)
+		//c := gameCPU.Step()
+		//gamePPU.Step(c)
+		gameCPU.Step()
 
 		// Si ejecuta LD B, B (0x40), revisamos los registros
 		if opcode == 0x40 {

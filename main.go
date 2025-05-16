@@ -69,6 +69,7 @@ func mainLoop(cpu *cpu.CPU, ppu *ppu.PPU, renderer *sdl.Renderer, texture *sdl.T
 	running := true
 
 	for running {
+		cycleCount += cpu.Step()
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			if _, ok := event.(*sdl.QuitEvent); ok {
 				running = false
@@ -88,10 +89,6 @@ func mainLoop(cpu *cpu.CPU, ppu *ppu.PPU, renderer *sdl.Renderer, texture *sdl.T
 				log.Printf("Error al copiar textura: %v", err)
 			}
 			renderer.Present()
-		} else {
-			cycles := cpu.Step()
-			cycleCount += cycles
-			ppu.Step(cycles)
 		}
 	}
 }
@@ -105,8 +102,8 @@ func main() {
 	romPath := os.Args[1]
 	cart := loadROM(romPath)
 	gameBus := bus.NewBus(cart)
-	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gamePPU)
 
 	window, renderer, texture := initSDL()
 	defer func() {

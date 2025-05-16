@@ -79,13 +79,14 @@ func TestBlargg_mem_timing_2(t *testing.T) {
 func runTestROM(path string) bool {
 	cart := cartridge.NewCartridge(path)
 	gameBus := bus.NewBus(cart)
-	gameCPU := cpu.NewCPU(gameBus)
 	gamePPU := ppu.NewPPU(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gamePPU)
 
 	for range 20 {
 		for range 400_000 {
-			c := gameCPU.Step()
-			gamePPU.Step(c)
+			//c := gameCPU.Step()
+			//gamePPU.Step(c)
+			gameCPU.Step()
 		}
 		// Inspecciona el texto en pantalla (desde VRAM)
 		text := extractScreenText(gameBus)
