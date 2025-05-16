@@ -8,6 +8,7 @@ import (
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
+	"github.com/deybismelendez/liteboy/timer"
 )
 
 var cpu_instrs = map[string]string{
@@ -80,7 +81,8 @@ func runTestROM(path string) bool {
 	cart := cartridge.NewCartridge(path)
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
-	gameCPU := cpu.NewCPU(gameBus, gamePPU)
+	gameTimer := timer.NewTimer(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
 
 	for range 20 {
 		for range 400_000 {

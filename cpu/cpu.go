@@ -8,6 +8,11 @@ import (
 
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/ppu"
+	"github.com/deybismelendez/liteboy/timer"
+)
+
+const (
+	DIVRegister = 0xFF04
 )
 
 // Representa la CPU del Game Boy DMG
@@ -17,20 +22,19 @@ type CPU struct {
 	d, e byte
 	h, l byte
 
-	pc           uint16 // Program Counter
-	sp           uint16 // Stack Pointer
-	halted       bool
-	Stopped      bool
-	ime          bool
-	enableIME    bool
-	divCounter   uint16
-	timerCounter int
-	tCycles      int
-	bus          *bus.Bus
-	ppu          *ppu.PPU
+	pc        uint16 // Program Counter
+	sp        uint16 // Stack Pointer
+	halted    bool
+	Stopped   bool
+	ime       bool
+	enableIME bool
+	tCycles   int
+	bus       *bus.Bus
+	ppu       *ppu.PPU
+	timer     *timer.Timer
 }
 
-func NewCPU(bus *bus.Bus, ppu *ppu.PPU) *CPU {
+func NewCPU(bus *bus.Bus, timer *timer.Timer, ppu *ppu.PPU) *CPU {
 	cpu := &CPU{}
 	cpu.a = 0x01
 	cpu.f = 0xB0
@@ -44,12 +48,11 @@ func NewCPU(bus *bus.Bus, ppu *ppu.PPU) *CPU {
 	cpu.sp = 0xFFFE
 	cpu.halted = false
 	cpu.Stopped = false
-	cpu.bus = bus
 	cpu.ime = false
 	cpu.enableIME = false
-	cpu.divCounter = 0
-	cpu.timerCounter = 0
+	cpu.bus = bus
 	cpu.ppu = ppu
+	cpu.timer = timer
 	return cpu
 }
 

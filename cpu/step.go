@@ -9,7 +9,7 @@ func (cpu *CPU) Step() int {
 		if interruptsPending {
 			cpu.halted = false
 		} else {
-			cpu.updateTimers(4)
+			cpu.tick(4)
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
 			return cpu.tCycles
 		}
@@ -33,8 +33,13 @@ func (cpu *CPU) Step() int {
 	cpu.pc++
 
 	// Ejecutar instrucción
-	tCyclesToUpdate := cpu.execute(opcode)
-	cpu.updateTimers(tCyclesToUpdate)
+	cpu.tick(cpu.execute(opcode))
 
 	return cpu.tCycles
+}
+
+func (cpu *CPU) tick(tCycles int) {
+	cpu.tCycles += tCycles
+	cpu.ppu.Step(tCycles)
+	cpu.timer.Step(tCycles)
 }

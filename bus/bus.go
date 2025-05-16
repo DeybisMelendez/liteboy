@@ -133,6 +133,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return 0xFF
 	}
 }
+
 func (b *Bus) Write(addr uint16, value byte) {
 	switch {
 	case addr < 0x8000:

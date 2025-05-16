@@ -10,6 +10,7 @@ import (
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
+	"github.com/deybismelendez/liteboy/timer"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -103,7 +104,8 @@ func main() {
 	cart := loadROM(romPath)
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
-	gameCPU := cpu.NewCPU(gameBus, gamePPU)
+	gameTimer := timer.NewTimer(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
 
 	window, renderer, texture := initSDL()
 	defer func() {
