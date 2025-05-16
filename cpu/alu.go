@@ -44,12 +44,12 @@ func (cpu *CPU) decR(r *byte) {
 	*r = result
 }
 
-// INC (HL) 8 bits Z 0 H -
+// INC (HL) 8 bits Z 0 H - suma 4 tcycles
 func (cpu *CPU) incHL() {
 	addr := cpu.getHL()
 	value := cpu.bus.Read(addr)
 	result := byte(value + 1)
-
+	cpu.tick()
 	// Flags
 	cpu.f &^= FlagN // N = 0
 	if result == 0 {
@@ -62,16 +62,16 @@ func (cpu *CPU) incHL() {
 	} else {
 		cpu.f &^= FlagH
 	}
-	cpu.tick(4)
 	cpu.bus.Write(addr, result)
+	cpu.tick()
 }
 
-// DEC (HL) 8 bits Z 1 H -
+// DEC (HL) 8 bits Z 1 H - suma 4 tcycles
 func (cpu *CPU) decHL() {
 	addr := cpu.getHL()
 	value := cpu.bus.Read(addr)
 	result := byte(value - 1)
-
+	cpu.tick()
 	// Flags
 	cpu.f |= FlagN // N = 1
 	if result == 0 {
@@ -84,21 +84,23 @@ func (cpu *CPU) decHL() {
 	} else {
 		cpu.f &^= FlagH
 	}
-	cpu.tick(4)
 	cpu.bus.Write(addr, result)
+	cpu.tick()
 }
 
-// INC 16 bits - - - -
+// INC 16 bits - - - - suma 4 tcycles
 func (cpu *CPU) inc16(set func(uint16), value uint16) {
 	set(value + 1)
+	cpu.tick()
 }
 
-// DEC 16 bits - - - -
+// DEC 16 bits - - - - suma 4 tcycles
 func (cpu *CPU) dec16(set func(uint16), value uint16) {
 	set(value - 1)
+	cpu.tick()
 }
 
-// Add 16 bits - 0 H C
+// Add 16 bits - 0 H C suma 4 tcycles
 func (cpu *CPU) addHL(b uint16) {
 	a := cpu.getHL()
 	cpu.ldHL(a + b)
@@ -113,6 +115,7 @@ func (cpu *CPU) addHL(b uint16) {
 	} else {
 		cpu.f &^= FlagC
 	}
+	cpu.tick()
 }
 
 // Add 8 bits Z 0 H C

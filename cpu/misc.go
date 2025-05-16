@@ -1,5 +1,6 @@
 package cpu
 
+// halt
 func (cpu *CPU) halt() {
 	cpu.halted = true
 }
@@ -16,6 +17,8 @@ func (cpu *CPU) di() {
 func (cpu *CPU) ei() {
 	cpu.enableIME = true
 }
+
+// activa ime y realiza ret, suma 12 tcycles
 func (cpu *CPU) reti() {
 	cpu.ime = true
 	cpu.ret()

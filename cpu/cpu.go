@@ -63,6 +63,12 @@ const (
 	FlagC byte = 1 << 4 // Carry
 )
 
+// Escribir en memoria suma 4 tcycles
+func (cpu *CPU) Write(addr uint16, value byte) {
+	cpu.bus.Write(addr, value)
+	cpu.tick()
+}
+
 func (cpu *CPU) Trace(opcode byte) {
 	log.Printf("Opcode: %02X PC=%04X SP=%04X A=%02X B=%02X C=%02X D=%02X E=%02X F=%b H=%02X L=%02X",
 		opcode, cpu.pc, cpu.sp, cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.f, cpu.h, cpu.l)

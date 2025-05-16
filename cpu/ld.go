@@ -21,13 +21,15 @@ func (cpu *CPU) ldHL(value uint16) {
 	cpu.l = byte(value & 0xFF)
 }
 
-// LD HL, SP+e8
+// LD HL, SP+e8 suma 8 tcycles
 func (cpu *CPU) ld_HL_SP_e8() {
 	e8 := cpu.getE8()
 	sp := cpu.sp
+	cpu.tick()
 	result := uint16(int32(int16(sp) + int16(e8)))
 
 	cpu.ldHL(result)
+	cpu.tick()
 	cpu.f = 0
 
 	// Detectar Half-Carry y Carry basados en los 8 bits bajos

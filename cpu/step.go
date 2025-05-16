@@ -9,7 +9,7 @@ func (cpu *CPU) Step() int {
 		if interruptsPending {
 			cpu.halted = false
 		} else {
-			cpu.tick(4)
+			cpu.tick()
 			// Si no hay interrupciones, CPU sigue halted, hace "nada"
 			return cpu.tCycles
 		}
@@ -31,15 +31,15 @@ func (cpu *CPU) Step() int {
 	// Fetch
 	opcode := cpu.bus.Read(cpu.pc)
 	cpu.pc++
-
-	// Ejecutar instrucción
-	cpu.tick(cpu.execute(opcode))
+	cpu.tick()
+	// Decode, Execute
+	cpu.execute(opcode)
 
 	return cpu.tCycles
 }
 
-func (cpu *CPU) tick(tCycles int) {
-	cpu.tCycles += tCycles
-	cpu.ppu.Step(tCycles)
-	cpu.timer.Step(tCycles)
+func (cpu *CPU) tick() {
+	cpu.tCycles += 4
+	cpu.ppu.Step(4)
+	cpu.timer.Step(4)
 }

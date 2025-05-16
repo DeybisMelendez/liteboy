@@ -11,16 +11,17 @@ func (cpu *CPU) handleInterrupt() {
 			cpu.bus.Write(0xFF0F, IF&^(1<<i))
 
 			cpu.ime = false
-			cpu.tick(8) // 2 M cycles de espera
+			cpu.tick() // 2 M cycles de espera
+			cpu.tick()
 			// Push PC a la pila
 			pc := cpu.pc
-			cpu.tick(4)
+			cpu.tick()
 			cpu.pushPC(byte((pc >> 8) & 0xFF))
-			cpu.tick(4)
+			cpu.tick()
 			cpu.pushPC(byte(pc & 0xFF))
 
 			// Salta al vector
-			cpu.tick(4)
+			cpu.tick()
 			cpu.pc = uint16(0x40 + i*8)
 
 			break
