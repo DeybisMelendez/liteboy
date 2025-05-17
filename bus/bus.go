@@ -31,6 +31,9 @@ type Bus struct {
 	IO         [0x80]byte    // 0xFF00 - 0xFF7F
 	HRAM       [0x7F]byte    // 0xFF80 - 0xFFFE
 	IE         byte          // 0xFFFF
+	// DIV Register
+	// Hack para resetear timer.internalCounter cuando CPU escribe en el registro
+	ResetDIV bool
 	// DMA
 	DMAIsActive      bool
 	enableDMA        bool
@@ -73,7 +76,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.OAM[addr-0xFE00]
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Printf("Intento de lectura en zona no usable en %04X, se retorna 0xFF\n", addr)
+		log.Printf("Intento de lectura en zona no usable en %04X, se retorna 0xFF por cliente %d\n", addr, b.Client)
 		return 0xFF
 
 	case addr >= 0xFF00 && addr < 0xFF80:
@@ -86,7 +89,7 @@ func (b *Bus) Read(addr uint16) byte {
 		return b.IE
 
 	default:
-		log.Printf("Intento de lectura fuera de rango en %04X\n", addr)
+		log.Printf("Intento de lectura fuera de rango en %04X por cliente %d\n", addr, b.Client)
 		return 0xFF
 	}
 }
@@ -98,7 +101,7 @@ func (b *Bus) Write(addr uint16, value byte) {
 	}
 	switch {
 	case addr < 0x8000:
-		log.Printf("Intento de escritura en ROM en %04X: %02X\n", addr, value)
+		log.Printf("Intento de escritura en ROM en %04X: %02X por cliente %d\n", addr, value, b.Client)
 		return
 
 	case addr >= 0x8000 && addr < 0xA000:
@@ -118,13 +121,14 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.OAM[addr-0xFE00] = value
 
 	case addr >= 0xFEA0 && addr < 0xFF00:
-		log.Printf("Intento de escritura en zona no usable en %04X: %02X\n", addr, value)
+		log.Printf("Intento de escritura en zona no usable en %04X: %02X por cliente %d\n", addr, value, b.Client)
 
 	case addr >= 0xFF00 && addr < 0xFF80:
 		// Si se intenta escribir en DIV se establece en 0
 		//https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
-		if addr == DIVRegister {
+		if b.Client == ClientCPU && addr == DIVRegister {
 			b.IO[addr-0xFF00] = 0x00
+			b.ResetDIV = true
 			return
 		}
 		// Activa el DMA
@@ -146,7 +150,7 @@ func (b *Bus) Write(addr uint16, value byte) {
 		b.IE = value
 
 	default:
-		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
+		log.Printf("Intento de escritura fuera de rango en %04X: %02X por cliente %d\n", addr, value, b.Client)
 	}
 }
 func (b *Bus) isAccessible(addr uint16) bool {
