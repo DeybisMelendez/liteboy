@@ -16,15 +16,6 @@ const (
 
 	ScreenWidth  = 160
 	ScreenHeight = 144
-
-	LCDCFlagBGDisplay     = 1 << 0
-	LCDCFlagOBJDisplay    = 1 << 1
-	LCDCFlagOBJSize       = 1 << 2
-	LCDCFlagBGTileMap     = 1 << 3
-	LCDCFlagBGTileData    = 1 << 4
-	LCDCFlagWindowEnable  = 1 << 5
-	LCDCFlagWindowTileMap = 1 << 6
-	LCDCFlagLCDEnable     = 1 << 7
 )
 
 type PPU struct {

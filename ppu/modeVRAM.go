@@ -1,5 +1,7 @@
 package ppu
 
+import "sort"
+
 func (ppu *PPU) runVRAM() {
 	// Calculamos el número de ciclos basados en la posición de SCX y los sprites
 	ppu.pixelFIFO = ppu.pixelFIFO[:0]
@@ -18,33 +20,27 @@ func (ppu *PPU) runVRAM() {
 	// Procedemos con el renderizado de una línea...
 	scx := ppu.bus.Read(SCXRegister)
 	scy := ppu.bus.Read(SCYRegister)
-	lcdc := ppu.bus.Read(LCDCRegister)
+	//lcdc := ppu.bus.Read(LCDCRegister)
 	wx := ppu.bus.Read(WXRegister)
 	wy := ppu.bus.Read(WYRegister)
-	drawWindow := (lcdc&LCDCFlagWindowEnable) != 0 && int(ly) >= int(wy)
+	drawWindow := ppu.isWindowEnabled()
 
-	bgTileMapAddr := uint16(0x9800)
-	if lcdc&LCDCFlagBGTileMap != 0 {
-		bgTileMapAddr = 0x9C00
-	}
+	bgTileMapAddr := ppu.getBGTileMapArea()
+	bgWindowTileData := ppu.getBGAndWindowTileDataArea()
 
-	//tileDataAddr := uint16(0x8800)
 	useSigned := true
-	if lcdc&LCDCFlagBGTileData != 0 {
-		//tileDataAddr = 0x8000
+	if bgWindowTileData == 0x8000 {
 		useSigned = false
 	}
 
-	for x := 0; x < ScreenWidth; x++ {
+	for x := range ScreenWidth {
+
 		var scrollX, scrollY uint16
 		var tileMapAddr uint16
 
-		if drawWindow && x >= int(wx)-7 {
+		if drawWindow && int(ly) >= int(wy) && x >= int(wx)-7 {
 			// Dibujamos Window
-			tileMapAddr = 0x9800
-			if lcdc&LCDCFlagWindowTileMap != 0 {
-				tileMapAddr = 0x9C00
-			}
+			tileMapAddr = ppu.getWindowTileMapArea()
 
 			windowY := uint16(ly) - uint16(wy)
 			windowX := uint16(x) - (uint16(wx) - 7)
@@ -69,7 +65,7 @@ func (ppu *PPU) runVRAM() {
 			row := (windowY % 8) * 2
 			byte1 := ppu.bus.Read(tileAddr + uint16(row))
 			byte2 := ppu.bus.Read(tileAddr + uint16(row) + 1)
-			bit := 7 - (scrollX % 8)
+			bit := 7 - (windowX % 8)
 
 			colorID := (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1)
 			palette := ppu.bus.Read(0xFF47)
@@ -110,14 +106,22 @@ func (ppu *PPU) runVRAM() {
 	for x := 0; x < ScreenWidth; x++ {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
-	ppu.renderSprites()
+	if ppu.isObjEnabled() {
+		ppu.renderSprites()
+	}
 }
 
 func (ppu *PPU) renderSprites() {
-	spriteHeight := byte(8)
-	if !ppu.isObj8x8() {
-		spriteHeight = 16
-	}
+	// Prioridad de sprites en coordenadas X
+	sort.SliceStable(ppu.spritesOnCurrentLine, func(i, j int) bool {
+		si, sj := ppu.spritesOnCurrentLine[i], ppu.spritesOnCurrentLine[j]
+		if si.X == sj.X {
+			return i > j // Prioridad por orden en OAM
+		}
+		return si.X > sj.X // Prioridad por X
+	})
+
+	spriteHeight := ppu.getObjHeight()
 
 	ly := ppu.bus.Read(LYRegister)
 
@@ -159,7 +163,7 @@ func (ppu *PPU) renderSprites() {
 			color := (palette >> (colorID * 2)) & 0x03
 			screenX := spriteX + x
 
-			if screenX < 0 || screenX >= ScreenWidth {
+			if (screenX < 0) || (screenX >= ScreenWidth) {
 				continue
 			}
 

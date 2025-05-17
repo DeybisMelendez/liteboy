@@ -7,10 +7,7 @@ func (ppu *PPU) scanOAM() {
 	ppu.cycles -= 80
 	ppu.setMode(ModeVRAM)
 
-	spriteHeight := byte(8)
-	if !ppu.isObj8x8() {
-		spriteHeight = 16
-	}
+	spriteHeight := ppu.getObjHeight()
 
 	var result []*Sprite
 	ly := ppu.bus.Read(LYRegister)
