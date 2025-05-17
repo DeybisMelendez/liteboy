@@ -72,7 +72,7 @@ func (ppu *PPU) runVRAM() {
 			color := (palette >> (colorID * 2)) & 0x03
 			ppu.addPixelToFIFO(getColorFromPalette(color))
 
-		} else {
+		} else if ppu.isBGAndWindowEnabledPriority() {
 			// Dibujamos Background
 			scrollX = (uint16(x) + uint16(scx)) & 0xFF
 			scrollY = (uint16(ly) + uint16(scy)) & 0xFF
@@ -99,11 +99,14 @@ func (ppu *PPU) runVRAM() {
 			palette := ppu.bus.Read(0xFF47)
 			color := (palette >> (colorID * 2)) & 0x03
 			ppu.addPixelToFIFO(getColorFromPalette(color))
+		} else {
+			// Si fondo está deshabilitado, llenamos con color 0
+			ppu.addPixelToFIFO(getColorFromPalette(0))
 		}
 	}
 
 	// Transferimos los píxeles de la FIFO al framebuffer
-	for x := 0; x < ScreenWidth; x++ {
+	for x := range ScreenWidth {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
 	if ppu.isObjEnabled() {
@@ -143,7 +146,7 @@ func (ppu *PPU) renderSprites() {
 		byte1 := ppu.bus.Read(tileAddr)
 		byte2 := ppu.bus.Read(tileAddr + 1)
 
-		for x := 0; x < 8; x++ {
+		for x := range 8 {
 			bit := 7 - x
 			if sprite.Atributes&0x20 != 0 { // X flip
 				bit = x
