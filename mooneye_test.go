@@ -13,9 +13,9 @@ import (
 var passValues []byte = []byte{3, 5, 8, 13, 21, 34}
 var failValues []byte = []byte{0x42, 0x42, 0x42, 0x42, 0x42, 0x42}
 var mooneyeAcceptance = map[string]string{
-	//"add_sp_e_timing":                 "roms/mooneye/acceptance/add_sp_e_timing.gb",
-	"bits/mem_oam": "roms/mooneye/acceptance/bits/mem_oam.gb",
-	"bits/reg_f":   "roms/mooneye/acceptance/bits/reg_f.gb",
+	"add_sp_e_timing": "roms/mooneye/acceptance/add_sp_e_timing.gb",
+	"bits/mem_oam":    "roms/mooneye/acceptance/bits/mem_oam.gb",
+	"bits/reg_f":      "roms/mooneye/acceptance/bits/reg_f.gb",
 	/*"boot_regs-dmgABC":                "roms/mooneye/acceptance/boot_regs-dmgABC.gb",
 	"call_cc_timing":                  "roms/mooneye/acceptance/call_cc_timing.gb",
 	"call_cc_timing2":                 "roms/mooneye/acceptance/call_cc_timing2.gb",

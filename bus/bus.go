@@ -10,6 +10,12 @@ const (
 	DIVRegister  = 0xFF04
 	TIMARegister = 0xFF05
 	TACRegister  = 0xFF07
+
+	ClientCPU     = 0
+	ClientPPU     = 1
+	ClientTimer   = 2
+	ClientDMA     = 3
+	ClientLiteBoy = 255
 )
 
 type Bus struct {
@@ -25,71 +31,22 @@ type Bus struct {
 	IO         [0x80]byte    // 0xFF00 - 0xFF7F
 	HRAM       [0x7F]byte    // 0xFF80 - 0xFFFE
 	IE         byte          // 0xFFFF
-}
-
-func NewBus(cart *cartridge.Cartridge) *Bus {
-	bus := &Bus{
-		cart:       cart,
-		BootROM:    BootROM,
-		bootActive: false,
-		ROM00:      &cart.ROM[0],
-		ROMNN:      &cart.ROM[1],
-		ERAM:       &[0x2000]byte{},
-	}
-
-	// Valores por defecto de los registros, igual que hiciste
-	bus.Write(0xFF00, 0xCF) // P1
-	bus.Write(0xFF01, 0x00) // SB
-	bus.Write(0xFF02, 0x7E) // SC
-	bus.Write(0xFF04, 0xAB) // DIV
-	bus.Write(0xFF05, 0x00) // TIMA
-	bus.Write(0xFF06, 0x00) // TMA
-	bus.Write(0xFF07, 0xF8) // TAC
-	bus.Write(0xFF0F, 0xE1) // IF
-
-	// Audio registers
-	bus.Write(0xFF10, 0x80)
-	bus.Write(0xFF11, 0xBF)
-	bus.Write(0xFF12, 0xF3)
-	bus.Write(0xFF13, 0xFF)
-	bus.Write(0xFF14, 0xBF)
-	bus.Write(0xFF16, 0x3F)
-	bus.Write(0xFF17, 0x00)
-	bus.Write(0xFF18, 0xFF)
-	bus.Write(0xFF19, 0xBF)
-	bus.Write(0xFF1A, 0x7F)
-	bus.Write(0xFF1B, 0xFF)
-	bus.Write(0xFF1C, 0x9F)
-	bus.Write(0xFF1D, 0xFF)
-	bus.Write(0xFF1E, 0xBF)
-	bus.Write(0xFF20, 0xFF)
-	bus.Write(0xFF21, 0x00)
-	bus.Write(0xFF22, 0x00)
-	bus.Write(0xFF23, 0xBF)
-	bus.Write(0xFF24, 0x77)
-	bus.Write(0xFF25, 0xF3)
-	bus.Write(0xFF26, 0xF0) // 0xF0 = DMG, 0xF1 = CGB
-
-	// PPU
-	bus.Write(0xFF40, 0x91) // LCDC
-	bus.Write(0xFF41, 0x85) // STAT (o 0x81 también se ve)
-	bus.Write(0xFF42, 0x00) // SCY
-	bus.Write(0xFF43, 0x00) // SCX
-	bus.Write(0xFF44, 0x00) // LY
-	bus.Write(0xFF45, 0x00) // LYC
-	bus.Write(0xFF46, 0xFF) // DMA
-	bus.Write(0xFF47, 0xFC) // BGP
-	bus.Write(0xFF48, 0xFF) // OBP0
-	bus.Write(0xFF49, 0xFF) // OBP1
-	bus.Write(0xFF4A, 0x00) // WY
-	bus.Write(0xFF4B, 0x00) // WX
-
-	bus.Write(0xFFFF, 0x00) // IE
-
-	return bus
+	// DMA
+	DMAIsActive      bool
+	enableDMA        bool
+	dmaSource        uint16
+	dmaIndex         uint16
+	dmaCyclesLeft    byte
+	dmaDelay         byte    // ciclos de retardo inicial (2)
+	pendingDMASource *uint16 // nuevo origen DMA si hay reinicio
+	Client           byte
 }
 
 func (b *Bus) Read(addr uint16) byte {
+	if !b.isAccessible(addr) {
+		log.Printf("Acceso denegado en lectura para el cliente %d en %04X\n", b.Client, addr)
+		return 0xFF
+	}
 	switch {
 	case addr < 0x100 && b.bootActive:
 		return b.BootROM[addr]
@@ -135,6 +92,10 @@ func (b *Bus) Read(addr uint16) byte {
 }
 
 func (b *Bus) Write(addr uint16, value byte) {
+	if !b.isAccessible(addr) {
+		log.Printf("Acceso denegado en escritura para el cliente %d en %04X\n", b.Client, addr)
+		return
+	}
 	switch {
 	case addr < 0x8000:
 		log.Printf("Intento de escritura en ROM en %04X: %02X\n", addr, value)
@@ -166,11 +127,13 @@ func (b *Bus) Write(addr uint16, value byte) {
 			b.IO[addr-0xFF00] = 0x00
 			return
 		}
+		// Activa el DMA
 		if addr == 0xFF46 {
 			b.IO[addr-0xFF00] = value
 			b.doDMATransfer(value)
 			return
 		}
+		// Desactiva el Boot ROM
 		if addr == 0xFF50 && value != 0 {
 			b.bootActive = false // Desactiva Boot ROM
 		}
@@ -186,10 +149,35 @@ func (b *Bus) Write(addr uint16, value byte) {
 		log.Printf("Intento de escritura fuera de rango en %04X: %02X\n", addr, value)
 	}
 }
-func (b *Bus) doDMATransfer(value byte) {
-	source := uint16(value) << 8 // Dirección de origen base
-	for i := 0; i < 0xA0; i++ {
-		data := b.Read(source + uint16(i))
-		b.OAM[i] = data
+func (b *Bus) isAccessible(addr uint16) bool {
+	switch b.Client {
+	case ClientCPU:
+		if b.DMAIsActive {
+			if (addr >= 0x8000 && addr < 0xA000) || (addr >= 0xFE00 && addr < 0xFEA0) {
+				log.Printf("Bloqueando acceso a %04X por cliente %d (DMA activo: %v)\n", addr, b.Client, b.DMAIsActive)
+				return false
+			}
+		}
+		return true
+	case ClientPPU:
+		// TODO: PPU accede solo a VRAM y OAM
+		return true
+	case ClientTimer:
+		// TODO: Timer accede a registros de temporizador
+		return true
+	case ClientDMA:
+		// DMA puede leer desde la fuente DMA (dmaSource..dmaSource+0x9F)
+		// y escribir a OAM (0xFE00..0xFE9F)
+		if addr == b.dmaSource+b.dmaIndex {
+			return true
+		}
+		if addr >= 0xFE00 && addr < 0xFEA0 {
+			return true
+		}
+		return false
+	case ClientLiteBoy:
+		return true
+	default:
+		return false
 	}
 }

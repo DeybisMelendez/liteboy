@@ -69,6 +69,7 @@ func (ppu *PPU) getMode() byte {
 }
 
 func (ppu *PPU) Step(tCycles int) {
+	ppu.bus.Client = 1
 	if !ppu.isLCDEnabled() {
 		ppu.bus.Write(LYRegister, 0)
 		ppu.setMode(ModeHBlank)
@@ -125,7 +126,6 @@ func (ppu *PPU) runHBlank() {
 		ppu.requestInterrupt(InterruptSTAT)
 	}
 	if ppu.cycles >= 204-len(ppu.spritesOnCurrentLine)*2 {
-		ppu.bus.Write(LYRegister, ppu.bus.Read(LYRegister)+1)
 		if ppu.bus.Read(LYRegister) == 144 {
 			ppu.setMode(ModeVBlank)
 			ppu.requestInterrupt(InterruptVBlank)
@@ -133,6 +133,7 @@ func (ppu *PPU) runHBlank() {
 		} else {
 			ppu.setMode(ModeOAM)
 		}
+		ppu.bus.Write(LYRegister, ppu.bus.Read(LYRegister)+1)
 		ppu.updateCoincidenceFlag()
 		ppu.cycles -= 204 - len(ppu.spritesOnCurrentLine)*2
 	}
@@ -149,8 +150,8 @@ func (ppu *PPU) runVBlank() {
 			ppu.setCoincidenceFlag(ppu.bus.Read(LYRegister) == ppu.bus.Read(LYCRegister))
 			ppu.setMode(ModeOAM)
 		} else {
-			ppu.updateCoincidenceFlag()
 			ppu.bus.Write(LYRegister, ppu.bus.Read(LYRegister)+1)
+			ppu.updateCoincidenceFlag()
 		}
 	}
 }

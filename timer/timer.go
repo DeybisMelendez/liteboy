@@ -22,6 +22,7 @@ func NewTimer(bus *bus.Bus) *Timer {
 }
 
 func (timer *Timer) Step(tCycles int) {
+	timer.bus.Client = 2
 	// --- DIV siempre avanza a 16384 Hz (cada 256 ciclos de CPU) ---
 	timer.divCounter += uint16(tCycles)
 	if timer.divCounter >= 256 {

@@ -2,6 +2,7 @@ package cpu
 
 // Step ejecuta una instrucción del procesador y devuelve los t-ciclos utilizados
 func (cpu *CPU) Step() int {
+	cpu.bus.Client = 0
 	cpu.tCycles = 0
 	interruptsPending := (cpu.bus.Read(0xFF0F) & cpu.bus.Read(0xFFFF)) != 0
 
@@ -34,12 +35,13 @@ func (cpu *CPU) Step() int {
 	cpu.tick()
 	// Decode, Execute
 	cpu.execute(opcode)
-
 	return cpu.tCycles
 }
 
 func (cpu *CPU) tick() {
 	cpu.tCycles += 4
+	cpu.bus.TickDMA()
 	cpu.ppu.Step(4)
 	cpu.timer.Step(4)
+	cpu.bus.Client = 0
 }
