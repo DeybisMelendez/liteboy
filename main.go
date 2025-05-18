@@ -102,6 +102,7 @@ func main() {
 
 	romPath := os.Args[1]
 	cart := loadROM(romPath)
+	cart.PrintHeaderInfo()
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
 	gameTimer := timer.NewTimer(gameBus)
