@@ -1,6 +1,8 @@
 package ppu
 
-import "sort"
+import (
+	"sort"
+)
 
 func (ppu *PPU) runVRAM() {
 	// Calculamos el número de ciclos basados en la posición de SCX y los sprites
@@ -20,10 +22,9 @@ func (ppu *PPU) runVRAM() {
 	// Procedemos con el renderizado de una línea...
 	scx := ppu.bus.Read(SCXRegister)
 	scy := ppu.bus.Read(SCYRegister)
-	//lcdc := ppu.bus.Read(LCDCRegister)
 	wx := ppu.bus.Read(WXRegister)
 	wy := ppu.bus.Read(WYRegister)
-	drawWindow := ppu.isWindowEnabled()
+	isWindowEnabled := ppu.isWindowEnabled()
 
 	bgTileMapAddr := ppu.getBGTileMapArea()
 	bgWindowTileData := ppu.getBGAndWindowTileDataArea()
@@ -32,17 +33,19 @@ func (ppu *PPU) runVRAM() {
 	if bgWindowTileData == 0x8000 {
 		useSigned = false
 	}
+	isWindowLine := isWindowEnabled && int(ly) >= int(wy) && int(wx) < ScreenWidth
+	if ly == wy && isWindowEnabled {
+		ppu.windowLineCounter = 0
+	}
 
 	for x := range ScreenWidth {
-
 		var scrollX, scrollY uint16
 		var tileMapAddr uint16
-
-		if drawWindow && int(ly) >= int(wy) && x >= int(wx)-7 {
+		if isWindowLine && x >= int(wx)-7 {
 			// Dibujamos Window
 			tileMapAddr = ppu.getWindowTileMapArea()
 
-			windowY := uint16(ly) - uint16(wy)
+			windowY := ppu.windowLineCounter
 			windowX := uint16(x) - (uint16(wx) - 7)
 
 			tileX := windowX / 8
@@ -72,7 +75,7 @@ func (ppu *PPU) runVRAM() {
 			color := (palette >> (colorID * 2)) & 0x03
 			ppu.addPixelToFIFO(getColorFromPalette(color))
 
-		} else if ppu.isBGAndWindowEnabledPriority() {
+		} else if ppu.isBGEnabled() {
 			// Dibujamos Background
 			scrollX = (uint16(x) + uint16(scx)) & 0xFF
 			scrollY = (uint16(ly) + uint16(scy)) & 0xFF
@@ -104,13 +107,15 @@ func (ppu *PPU) runVRAM() {
 			ppu.addPixelToFIFO(getColorFromPalette(0))
 		}
 	}
-
-	// Transferimos los píxeles de la FIFO al framebuffer
 	for x := range ScreenWidth {
 		ppu.popPixelFromFIFO(x, int(ly))
 	}
 	if ppu.isObjEnabled() {
 		ppu.renderSprites()
+	}
+
+	if isWindowLine {
+		ppu.windowLineCounter++
 	}
 }
 
@@ -119,15 +124,14 @@ func (ppu *PPU) renderSprites() {
 	sort.SliceStable(ppu.spritesOnCurrentLine, func(i, j int) bool {
 		si, sj := ppu.spritesOnCurrentLine[i], ppu.spritesOnCurrentLine[j]
 		if si.X == sj.X {
-			return i > j // Prioridad por orden en OAM
+			return i < j // Prioridad por orden en OAM
 		}
-		return si.X > sj.X // Prioridad por X
+		return si.X < sj.X // Prioridad por X
 	})
 
 	spriteHeight := ppu.getObjHeight()
 
 	ly := ppu.bus.Read(LYRegister)
-
 	for _, sprite := range ppu.spritesOnCurrentLine {
 		spriteY := int(sprite.Y) - 16
 		spriteX := int(sprite.X) - 8
@@ -179,7 +183,6 @@ func (ppu *PPU) renderSprites() {
 					continue
 				}
 			}
-			//ppu.addPixelToFIFO(getColorFromPalette(color))
 			ppu.Framebuffer[getFramebufferIndex(screenX, int(ly))] = getColorFromPalette(color)
 		}
 	}

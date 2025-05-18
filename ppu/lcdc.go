@@ -60,6 +60,6 @@ func (ppu *PPU) isObjEnabled() bool {
 }
 
 // false = Off; true = On
-func (ppu *PPU) isBGAndWindowEnabledPriority() bool {
+func (ppu *PPU) isBGEnabled() bool {
 	return ppu.bus.Read(LCDCRegister)&LCDCFlagBGEnablePriority != 0
 }
