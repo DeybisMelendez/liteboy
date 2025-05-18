@@ -25,14 +25,16 @@ const (
 type Game struct {
 	cpu       *cpu.CPU
 	ppu       *ppu.PPU
+	bus       *bus.Bus
 	lastCycle int
 	image     *ebiten.Image
 }
 
-func NewGame(cpu *cpu.CPU, ppu *ppu.PPU) *Game {
+func NewGame(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus) *Game {
 	return &Game{
 		cpu:   cpu,
 		ppu:   ppu,
+		bus:   bus,
 		image: ebiten.NewImage(ScreenWidth, ScreenHeight),
 	}
 }
@@ -44,6 +46,47 @@ func (g *Game) Update() error {
 		g.lastCycle -= TargetCycle
 		g.image.WritePixels(g.ppu.Framebuffer)
 	}
+	// Leer el valor del registro P1 (0xFF00)
+	p1 := g.bus.Read(0xFF00)
+
+	// Bit 4: dirección (0=activado), Bit 5: botones
+	directionKeys := (p1 & (1 << 4)) == 0
+	buttonKeys := (p1 & (1 << 5)) == 0
+
+	var input byte = 0x0F // bits 0-3: todos presionados (1 = no presionado)
+
+	if directionKeys {
+		if ebiten.IsKeyPressed(ebiten.KeyRight) {
+			input &= ^byte(1 << 0) // Bit 0 - Derecha
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+			input &= ^byte(1 << 1) // Bit 1 - Izquierda
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyUp) {
+			input &= ^byte(1 << 2) // Bit 2 - Arriba
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyDown) {
+			input &= ^byte(1 << 3) // Bit 3 - Abajo
+		}
+	}
+
+	if buttonKeys {
+		if ebiten.IsKeyPressed(ebiten.KeyZ) {
+			input &= ^byte(1 << 0) // Bit 0 - A
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyX) {
+			input &= ^byte(1 << 1) // Bit 1 - B
+		}
+		if ebiten.IsKeyPressed(ebiten.KeySpace) {
+			input &= ^byte(1 << 2) // Bit 2 - Select
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+			input &= ^byte(1 << 3) // Bit 3 - Start
+		}
+	}
+
+	// Escribir bits 0-3 en el registro FF00 sin tocar bits 4-7
+	g.bus.Write(0xFF00, (p1&0xF0)|input)
 	// Actualizar la imagen con el framebuffer RGBA (suponiendo que ppu.Framebuffer es []byte RGBA8888)
 	// ebiten espera un slice []byte con pixels en formato RGBA8888
 
@@ -100,7 +143,7 @@ func main() {
 	gameTimer := timer.NewTimer(gameBus)
 	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
 
-	game := NewGame(gameCPU, gamePPU)
+	game := NewGame(gameCPU, gamePPU, gameBus)
 
 	// Configurar ventana y correr el loop de Ebiten
 	ebiten.SetWindowSize(ScreenWidth*Scale, ScreenHeight*Scale)
