@@ -1,5 +1,7 @@
 package cartridge
 
+import "os"
+
 type mbc1 struct {
 	ROM         [][0x4000]byte  // slices de bancos ROM de 16KiB cada uno
 	ERAM        [4][0x2000]byte // hasta 4 bancos de 8KiB ERAM
@@ -72,5 +74,50 @@ func (m *mbc1) Write(addr uint16, value byte) {
 	case addr >= 0x6000 && addr < 0x8000:
 		// Banking mode select (0=ROM banking mode, 1=RAM banking mode)
 		m.bankingMode = value & 0x01
+
+	case addr >= 0xA000 && addr < 0xC000:
+		if !m.ramEnabled {
+			return // No escribir si RAM no está habilitada
+		}
+		ramBank := 0
+		if m.bankingMode == 1 {
+			ramBank = int(m.ramBank) & 0x03
+		}
+		offset := addr - 0xA000
+		m.ERAM[ramBank][offset] = value
 	}
+}
+
+// SaveToFile guarda el contenido de la RAM externa a un archivo .sav
+func (m *mbc1) SaveToFile(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Escribe todos los bancos de RAM (4 x 8KB = 32KB)
+	for _, bank := range m.ERAM {
+		if _, err := file.Write(bank[:]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// LoadFromFile carga el contenido de un archivo .sav en la RAM externa
+func (m *mbc1) LoadFromFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for i := range m.ERAM {
+		_, err := file.Read(m.ERAM[i][:])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
