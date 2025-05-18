@@ -11,11 +11,11 @@ func (ppu *PPU) runVRAM() {
 		return
 	}
 	ppu.cycles -= 172
-	ppu.setMode(ModeHBlank)
 
 	// Si ya se dibujaron todas las líneas pasa a HBlank
 	ly := ppu.bus.Read(LYRegister)
 	if ly >= ScreenHeight {
+		ppu.setMode(ModeHBlank)
 		return
 	}
 
@@ -37,8 +37,11 @@ func (ppu *PPU) runVRAM() {
 	if ly == wy && isWindowEnabled {
 		ppu.windowLineCounter = 0
 	}
-
 	for x := range ScreenWidth {
+		if !ppu.isBGEnabled() {
+			ppu.addPixelToFIFO(getColorFromPalette(0))
+			continue
+		}
 		var scrollX, scrollY uint16
 		var tileMapAddr uint16
 		if isWindowLine && x >= int(wx)-7 {
@@ -75,7 +78,7 @@ func (ppu *PPU) runVRAM() {
 			color := (palette >> (colorID * 2)) & 0x03
 			ppu.addPixelToFIFO(getColorFromPalette(color))
 
-		} else if ppu.isBGEnabled() {
+		} else { // if ppu.isBGEnabled() { // bit 0 lcdc
 			// Dibujamos Background
 			scrollX = (uint16(x) + uint16(scx)) & 0xFF
 			scrollY = (uint16(ly) + uint16(scy)) & 0xFF
@@ -102,9 +105,6 @@ func (ppu *PPU) runVRAM() {
 			palette := ppu.bus.Read(0xFF47)
 			color := (palette >> (colorID * 2)) & 0x03
 			ppu.addPixelToFIFO(getColorFromPalette(color))
-		} else {
-			// Si fondo está deshabilitado, llenamos con color 0
-			ppu.addPixelToFIFO(getColorFromPalette(0))
 		}
 	}
 	for x := range ScreenWidth {
@@ -113,10 +113,10 @@ func (ppu *PPU) runVRAM() {
 	if ppu.isObjEnabled() {
 		ppu.renderSprites()
 	}
-
 	if isWindowLine {
 		ppu.windowLineCounter++
 	}
+	ppu.setMode(ModeHBlank)
 }
 
 func (ppu *PPU) renderSprites() {
@@ -128,7 +128,6 @@ func (ppu *PPU) renderSprites() {
 		}
 		return si.X > sj.X // Prioridad por X
 	})
-
 	spriteHeight := ppu.getObjHeight()
 
 	ly := ppu.bus.Read(LYRegister)

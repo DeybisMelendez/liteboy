@@ -1,9 +1,6 @@
 package ppu
 
 func (ppu *PPU) runHBlank() {
-	if ppu.isHBlankInterruptEnabled() {
-		ppu.requestInterrupt(InterruptSTAT)
-	}
 	if ppu.cycles < 204 {
 		return
 	}
@@ -11,12 +8,12 @@ func (ppu *PPU) runHBlank() {
 	ly := ppu.bus.Read(LYRegister)
 	if ly == 144 {
 		ppu.setMode(ModeVBlank)
-		ppu.requestInterrupt(InterruptVBlank)
-		ppu.requestInterrupt(InterruptSTAT)
+		//ppu.requestInterrupt(InterruptVBlank)
+		//ppu.requestInterrupt(InterruptSTAT)
 	} else {
+		ppu.bus.Write(LYRegister, ly+1)
+		ppu.updateCoincidenceFlag()
 		ppu.setMode(ModeOAM)
 	}
-	ppu.bus.Write(LYRegister, ly+1)
-	ppu.updateCoincidenceFlag()
 
 }

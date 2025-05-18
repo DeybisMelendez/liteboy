@@ -5,7 +5,6 @@ func (ppu *PPU) scanOAM() {
 		return
 	}
 	ppu.cycles -= 80
-	ppu.setMode(ModeVRAM)
 
 	spriteHeight := ppu.getObjHeight()
 
@@ -21,7 +20,7 @@ func (ppu *PPU) scanOAM() {
 
 		// Posición real de y es y - 16
 		if ly >= y-16 && ly < (y-16)+spriteHeight {
-			sprite := newSprite(x, y, tile, attr, i)
+			sprite := newSprite(x, y, tile, attr)
 			result = append(result, sprite)
 
 			if len(result) == MaxSpritesPerLine {
@@ -30,4 +29,5 @@ func (ppu *PPU) scanOAM() {
 		}
 	}
 	ppu.spritesOnCurrentLine = result
+	ppu.setMode(ModeVRAM)
 }

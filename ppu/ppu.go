@@ -52,24 +52,6 @@ func (ppu *PPU) popPixelFromFIFO(x, y int) {
 	}
 }
 
-func (ppu *PPU) setMode(mode byte) {
-	ppu.bus.Write(STATRegister, (ppu.bus.Read(STATRegister)&^0x03)|mode&0x03)
-}
-
-func (ppu *PPU) getMode() byte {
-	return ppu.bus.Read(STATRegister) & 0x03
-}
-
-func (ppu *PPU) updateCoincidenceFlag() {
-	ly := ppu.bus.Read(LYRegister)
-	lyc := ppu.bus.Read(LYCRegister)
-	match := ly == lyc
-	ppu.setCoincidenceFlag(match)
-	if match && ppu.isLYCInterruptEnabled() {
-		ppu.requestInterrupt(InterruptSTAT)
-	}
-}
-
 func getFramebufferIndex(x, y int) int {
 	return y*ScreenWidth + x
 }
@@ -84,8 +66,6 @@ func getColorFromPalette(color byte) uint32 {
 		return 0x555555FF // gris oscuro
 	case 3:
 		return 0x000000FF // negro
-	case 4:
-		return 0xFFFFFF00 // negro
 	default:
 		panic("No se reconoce color")
 	}

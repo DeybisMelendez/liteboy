@@ -11,8 +11,7 @@ func (ppu *PPU) runVBlank() {
 	ly := ppu.bus.Read(LYRegister)
 	if ly == 154 {
 		ppu.bus.Write(LYRegister, 0)
-		// LYC == LY ; LY = 0
-		ppu.setCoincidenceFlag(ppu.bus.Read(LYCRegister) == 0)
+		ppu.updateCoincidenceFlag()
 		ppu.setMode(ModeOAM)
 	} else {
 		ppu.bus.Write(LYRegister, ly+1)

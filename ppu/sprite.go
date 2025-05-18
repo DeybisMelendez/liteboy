@@ -7,12 +7,11 @@ type Sprite struct {
 	OAMIndex                   uint16
 }
 
-func newSprite(x, y, tileIndex, atributes byte, OAMIndex uint16) *Sprite {
+func newSprite(x, y, tileIndex, atributes byte) *Sprite {
 	return &Sprite{
 		X:         x,
 		Y:         y,
 		TileIndex: tileIndex,
 		Atributes: atributes,
-		OAMIndex:  OAMIndex,
 	}
 }
