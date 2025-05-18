@@ -22,15 +22,15 @@ type Bus struct {
 	cart       *cartridge.Cartridge
 	BootROM    [0x100]byte
 	bootActive bool
-	ROM00      *[0x4000]byte // 0x0000 - 0x3FFF
-	ROMNN      *[0x4000]byte // 0x4000 - 0x7FFF
-	VRAM       [0x2000]byte  // 0x8000 - 0x9FFF
-	ERAM       *[0x2000]byte // 0xA000 - 0xBFFF
-	WRAM       [0x2000]byte  // 0xC000 - 0xDFFF
-	OAM        [0xA0]byte    // 0xFE00 - 0xFE9F
-	IO         [0x80]byte    // 0xFF00 - 0xFF7F
-	HRAM       [0x7F]byte    // 0xFF80 - 0xFFFE
-	IE         byte          // 0xFFFF
+	//ROM00      *[0x4000]byte // 0x0000 - 0x3FFF
+	//ROMNN      *[0x4000]byte // 0x4000 - 0x7FFF
+	VRAM [0x2000]byte  // 0x8000 - 0x9FFF
+	ERAM *[0x2000]byte // 0xA000 - 0xBFFF
+	WRAM [0x2000]byte  // 0xC000 - 0xDFFF
+	OAM  [0xA0]byte    // 0xFE00 - 0xFE9F
+	IO   [0x80]byte    // 0xFF00 - 0xFF7F
+	HRAM [0x7F]byte    // 0xFF80 - 0xFFFE
+	IE   byte          // 0xFFFF
 	// DIV Register
 	// Hack para resetear timer.internalCounter cuando CPU escribe en el registro
 	ResetDIV bool
@@ -53,17 +53,11 @@ func (b *Bus) Read(addr uint16) byte {
 	switch {
 	case addr < 0x100 && b.bootActive:
 		return b.BootROM[addr]
-	case addr < 0x4000:
-		return b.ROM00[addr]
-
-	case addr < 0x8000:
-		return b.ROMNN[addr-0x4000]
+	case addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000):
+		return b.cart.Memory.Read(addr)
 
 	case addr >= 0x8000 && addr < 0xA000:
 		return b.VRAM[addr-0x8000]
-
-	case addr >= 0xA000 && addr < 0xC000:
-		return b.ERAM[addr-0xA000]
 
 	case addr >= 0xC000 && addr < 0xE000:
 		return b.WRAM[addr-0xC000]
@@ -100,15 +94,12 @@ func (b *Bus) Write(addr uint16, value byte) {
 		return
 	}
 	switch {
-	case addr < 0x8000:
-		log.Printf("Intento de escritura en ROM en %04X: %02X por cliente %d\n", addr, value, b.Client)
+	case addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000):
+		b.cart.Memory.Write(addr, value)
 		return
 
 	case addr >= 0x8000 && addr < 0xA000:
 		b.VRAM[addr-0x8000] = value
-
-	case addr >= 0xA000 && addr < 0xC000:
-		b.ERAM[addr-0xA000] = value
 
 	case addr >= 0xC000 && addr < 0xE000:
 		b.WRAM[addr-0xC000] = value

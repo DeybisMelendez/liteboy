@@ -99,10 +99,16 @@ func main() {
 		fmt.Println("Uso: go run main.go <path_a_la_rom.gb>")
 		return
 	}
-
 	romPath := os.Args[1]
+	if len(os.Args) == 3 {
+		if os.Args[2] == "--info" {
+			cart := loadROM(romPath)
+			cart.PrintHeaderInfo()
+			os.Exit(0)
+		}
+	}
+
 	cart := loadROM(romPath)
-	cart.PrintHeaderInfo()
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
 	gameTimer := timer.NewTimer(gameBus)

@@ -23,7 +23,12 @@ type Cartridge struct {
 	Version          byte
 	Checksum         byte
 	GlobalChecksum   uint16
-	ROM              [][0x4000]byte
+	Memory           Memory
+	//ROM              [][0x4000]byte
+}
+type Memory interface {
+	Read(addr uint16) byte
+	Write(addr uint16, value byte)
 }
 
 // NewCartridge loads and parses a Game Boy ROM cartridge
@@ -39,12 +44,22 @@ func NewCartridge(path string) *Cartridge {
 
 	cart := &Cartridge{Path: path}
 	bankCount := numBanksFromHeader(rom[0x0148])
-	cart.ROM = make([][0x4000]byte, bankCount)
-
+	//cart.ROM = make([][0x4000]byte, bankCount)
+	romBanks := make([][0x4000]byte, bankCount)
 	for i := 0; i < bankCount; i++ {
 		start := i * 0x4000
 		end := min(start+0x4000, len(rom))
-		copy(cart.ROM[i][:], rom[start:end])
+		copy(romBanks[i][:], rom[start:end])
+	}
+	romType := rom[0x0147]
+	switch romType {
+	case 0x00:
+		cart.Memory = &romOnly{ROM: romBanks}
+	case 0x01, 0x02, 0x03:
+		cart.Memory = &mbc1{ROM: romBanks}
+	// Aquí podrías agregar MBC2, MBC3, MBC5...
+	default:
+		log.Fatalf("Tipo de cartucho no soportado: 0x%02X. Se usará ROMOnly como fallback.\n", romType)
 	}
 
 	cart.Entry = rom[0x0100:0x0104]
@@ -54,7 +69,7 @@ func NewCartridge(path string) *Cartridge {
 	cart.CGBFlag = rom[0x0143]
 	cart.NewLicense = newLicCodes[string(rom[0x0144:0x0146])]
 	cart.SGBFlag = rom[0x0146]
-	cart.CartridgeType = cartridgeTypes[rom[0x0147]]
+	cart.CartridgeType = cartridgeTypes[romType]
 	cart.ROMSize = romSizes[rom[0x0148]]
 	cart.RAMSize = ramSizes[rom[0x0149]]
 	cart.Destination = destinationCodes[rom[0x014A]]
@@ -66,9 +81,9 @@ func NewCartridge(path string) *Cartridge {
 	return cart
 }
 
-func (c *Cartridge) GetROM() *[][0x4000]byte {
+/*func (c *Cartridge) GetROM() *[][0x4000]byte {
 	return &c.ROM
-}
+}*/
 
 func (c *Cartridge) PrintHeaderInfo() {
 	fmt.Println("--- Información del cartucho: ---")
@@ -87,8 +102,8 @@ func (c *Cartridge) PrintHeaderInfo() {
 
 func (c *Cartridge) ValidateChecksum() string {
 	var checksum byte = 0
-	for addr := 0x0134; addr <= 0x014C; addr++ {
-		checksum = checksum - c.ROM[0][addr] - 1
+	for addr := uint16(0x0134); addr <= 0x014C; addr++ {
+		checksum = checksum - c.Memory.Read(addr) - 1
 	}
 	if c.Checksum == checksum {
 		return "Válido"

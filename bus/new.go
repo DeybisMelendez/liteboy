@@ -4,11 +4,11 @@ import "github.com/deybismelendez/liteboy/cartridge"
 
 func NewBus(cart *cartridge.Cartridge) *Bus {
 	bus := &Bus{
-		cart:        cart,
-		BootROM:     BootROM,
-		bootActive:  false,
-		ROM00:       &cart.ROM[0],
-		ROMNN:       &cart.ROM[1],
+		cart:       cart,
+		BootROM:    BootROM,
+		bootActive: false,
+		//ROM00:       &cart.ROM[0],
+		//ROMNN:       &cart.ROM[1],
 		ERAM:        &[0x2000]byte{},
 		DMAIsActive: false,
 		Client:      ClientLiteBoy,
