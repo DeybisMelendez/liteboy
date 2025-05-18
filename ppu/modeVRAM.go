@@ -124,9 +124,9 @@ func (ppu *PPU) renderSprites() {
 	sort.SliceStable(ppu.spritesOnCurrentLine, func(i, j int) bool {
 		si, sj := ppu.spritesOnCurrentLine[i], ppu.spritesOnCurrentLine[j]
 		if si.X == sj.X {
-			return i < j // Prioridad por orden en OAM
+			return i > j // Prioridad por orden en OAM
 		}
-		return si.X < sj.X // Prioridad por X
+		return si.X > sj.X // Prioridad por X
 	})
 
 	spriteHeight := ppu.getObjHeight()
