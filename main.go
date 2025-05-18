@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"unsafe"
 
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
 	"github.com/deybismelendez/liteboy/timer"
-	"github.com/veandco/go-sdl2/sdl"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 const (
@@ -21,40 +22,55 @@ const (
 	TargetCycle  = 70224
 )
 
-func initSDL() (*sdl.Window, *sdl.Renderer, *sdl.Texture) {
-	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
-		log.Fatalf("Error al iniciar SDL: %v", err)
+type Game struct {
+	cpu       *cpu.CPU
+	ppu       *ppu.PPU
+	lastCycle int
+	image     *ebiten.Image
+}
+
+func NewGame(cpu *cpu.CPU, ppu *ppu.PPU) *Game {
+	return &Game{
+		cpu:   cpu,
+		ppu:   ppu,
+		image: ebiten.NewImage(ScreenWidth, ScreenHeight),
+	}
+}
+
+func (g *Game) Update() error {
+	// Ejecutamos ciclos hasta llegar al target para refrescar la pantalla (simil a frame)
+	g.lastCycle += g.cpu.Step()
+	if g.lastCycle > TargetCycle {
+		g.lastCycle -= TargetCycle
+		g.image.WritePixels(g.ppu.Framebuffer)
+	}
+	// Actualizar la imagen con el framebuffer RGBA (suponiendo que ppu.Framebuffer es []byte RGBA8888)
+	// ebiten espera un slice []byte con pixels en formato RGBA8888
+
+	// Asegurarse que el framebuffer tenga el tamaño correcto
+	if len(g.ppu.Framebuffer) != ScreenWidth*ScreenHeight*4 {
+		return fmt.Errorf("framebuffer size incorrecta")
 	}
 
-	window, err := sdl.CreateWindow("LiteBoy Emulator",
-		sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED,
-		ScreenWidth*Scale, ScreenHeight*Scale,
-		sdl.WINDOW_SHOWN)
-	if err != nil {
-		sdl.Quit()
-		log.Fatalf("Error al crear ventana: %v", err)
-	}
+	// Copy pixels directo a ebiten.Image
+	// ebiten.Image.WritePixels espera []byte en formato RGBA8888
 
-	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
-	if err != nil {
-		window.Destroy()
-		sdl.Quit()
-		log.Fatalf("Error al crear renderer: %v", err)
-	}
+	return nil
+}
 
-	texture, err := renderer.CreateTexture(
-		sdl.PIXELFORMAT_RGBA8888,
-		sdl.TEXTUREACCESS_STREAMING,
-		ScreenWidth, ScreenHeight,
-	)
-	if err != nil {
-		renderer.Destroy()
-		window.Destroy()
-		sdl.Quit()
-		log.Fatalf("Error al crear textura: %v", err)
-	}
+func (g *Game) Draw(screen *ebiten.Image) {
+	// Escalar la imagen a la ventana (multiplicando el tamaño)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(Scale, Scale)
+	screen.DrawImage(g.image, op)
 
-	return window, renderer, texture
+	// Mostrar FPS en pantalla
+	msg := fmt.Sprintf("LiteBoy Emulator - Press ESC to quit\nFPS: %.2f", ebiten.ActualFPS())
+	ebitenutil.DebugPrint(screen, msg)
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return ScreenWidth * Scale, ScreenHeight * Scale
 }
 
 func loadROM(path string) *cartridge.Cartridge {
@@ -65,47 +81,17 @@ func loadROM(path string) *cartridge.Cartridge {
 	return cart
 }
 
-func mainLoop(cpu *cpu.CPU, ppu *ppu.PPU, renderer *sdl.Renderer, texture *sdl.Texture) {
-	cycleCount := 0
-	running := true
-
-	for running {
-		cycleCount += cpu.Step()
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			if _, ok := event.(*sdl.QuitEvent); ok {
-				running = false
-			}
-		}
-
-		if cycleCount >= TargetCycle {
-			cycleCount -= TargetCycle
-
-			err := texture.Update(nil, unsafe.Pointer(&ppu.Framebuffer[0]), ScreenWidth*4)
-			if err != nil {
-				log.Printf("Error al actualizar textura: %v", err)
-			}
-
-			renderer.Clear()
-			if err := renderer.Copy(texture, nil, nil); err != nil {
-				log.Printf("Error al copiar textura: %v", err)
-			}
-			renderer.Present()
-		}
-	}
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Uso: go run main.go <path_a_la_rom.gb>")
 		return
 	}
+
 	romPath := os.Args[1]
-	if len(os.Args) == 3 {
-		if os.Args[2] == "--info" {
-			cart := loadROM(romPath)
-			cart.PrintHeaderInfo()
-			os.Exit(0)
-		}
+	if len(os.Args) == 3 && os.Args[2] == "--info" {
+		cart := loadROM(romPath)
+		cart.PrintHeaderInfo()
+		os.Exit(0)
 	}
 
 	cart := loadROM(romPath)
@@ -114,13 +100,13 @@ func main() {
 	gameTimer := timer.NewTimer(gameBus)
 	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
 
-	window, renderer, texture := initSDL()
-	defer func() {
-		texture.Destroy()
-		renderer.Destroy()
-		window.Destroy()
-		sdl.Quit()
-	}()
+	game := NewGame(gameCPU, gamePPU)
 
-	mainLoop(gameCPU, gamePPU, renderer, texture)
+	// Configurar ventana y correr el loop de Ebiten
+	ebiten.SetWindowSize(ScreenWidth*Scale, ScreenHeight*Scale)
+	ebiten.SetWindowTitle("LiteBoy Emulator")
+	ebiten.SetTPS(800_000)
+	if err := ebiten.RunGame(game); err != nil {
+		log.Fatal(err)
+	}
 }

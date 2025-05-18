@@ -175,14 +175,22 @@ func (ppu *PPU) renderSprites() {
 
 			// Prioridad: fondo (bit 7)
 			bgPriority := sprite.Atributes&0x80 != 0
+			pixelIndex := getFramebufferIndex(screenX, int(ly))
 			if bgPriority {
 				// Omitimos dibujar si fondo no es color 0
-				bgPixel := ppu.Framebuffer[getFramebufferIndex(screenX, int(ly))]
-				if bgPixel != getColorFromPalette(0) {
+				bgPixel := newPixel(ppu.Framebuffer[pixelIndex],
+					ppu.Framebuffer[pixelIndex+1],
+					ppu.Framebuffer[pixelIndex+2],
+					ppu.Framebuffer[pixelIndex+3])
+				if (bgPixel.R != WhiteColor.R) && (bgPixel.G != WhiteColor.G) && (bgPixel.B != WhiteColor.B) {
 					continue
 				}
 			}
-			ppu.Framebuffer[getFramebufferIndex(screenX, int(ly))] = getColorFromPalette(color)
+			pixel := getColorFromPalette(color)
+			ppu.Framebuffer[pixelIndex] = pixel.R
+			ppu.Framebuffer[pixelIndex+1] = pixel.G
+			ppu.Framebuffer[pixelIndex+2] = pixel.B
+			ppu.Framebuffer[pixelIndex+3] = pixel.A
 		}
 	}
 
