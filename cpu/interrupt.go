@@ -13,6 +13,13 @@ func (cpu *CPU) handleInterrupt() {
 			pc := cpu.pc
 			cpu.tick()
 			cpu.pushPC(byte((pc >> 8) & 0xFF))
+			// Interrupt dispatch cancellation via IE write during PC push
+			// Pasa el test de mooneye acceptance/interrupts/ie_push
+			if cpu.sp == 0xFFFF {
+				cpu.ime = false
+				cpu.pc = 0
+				continue
+			}
 			cpu.tick()
 			cpu.pushPC(byte(pc & 0xFF))
 
