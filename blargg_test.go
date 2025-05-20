@@ -120,11 +120,6 @@ func extractScreenText(b *bus.Bus) string {
 	return out.String()
 }
 
-/*
-	var interrupt_time = map[string]string{
-		"interrupt_time": "roms/blargg/interrupt_time/interrupt_time.gb",
-	}
-*/
 /*var oam_bug = map[string]string{
 	"1-lcd_sync":        "roms/blargg/oam_bug/rom_singles/1-lcd_sync.gb",
 	"2-causes":          "roms/blargg/oam_bug/rom_singles/2-causes.gb",
@@ -134,16 +129,6 @@ func extractScreenText(b *bus.Bus) string {
 	"6-timing_no_bug":   "roms/blargg/oam_bug/rom_singles/6-timing_no_bug.gb",
 	"7-timing_effect":   "roms/blargg/oam_bug/rom_singles/7-timing_effect.gb",
 	"8-instr_effect":    "roms/blargg/oam_bug/rom_singles/8-instr_effect.gb",
-}*/
-
-/*func TestBlargg_interrupt_time(t *testing.T) {
-	for name, path := range interrupt_time {
-		t.Run(name, func(t *testing.T) {
-			if ok := runTestROM(path); !ok {
-				t.Errorf("Test %s failed", name)
-			}
-		})
-	}
 }*/
 
 /*func TestBlargg_oam_bug(t *testing.T) {

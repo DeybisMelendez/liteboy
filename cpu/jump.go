@@ -13,6 +13,7 @@ func (cpu *CPU) ret() {
 
 // suma 12 tcycles
 func (cpu *CPU) call16(addr uint16) {
+	cpu.tick()
 	cpu.sp -= 1
 	cpu.bus.Write(cpu.sp, byte(cpu.pc>>8)) // PC high byte
 	cpu.tick()
@@ -20,17 +21,4 @@ func (cpu *CPU) call16(addr uint16) {
 	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF)) // PC low byte
 	cpu.tick()
 	cpu.pc = addr
-	cpu.tick()
-}
-
-// TODO: call16 y rst16 son las mismas
-// reset, jump to fixed address
-func (cpu *CPU) rst16(addr uint16) {
-	cpu.sp -= 1
-	cpu.bus.Write(cpu.sp, byte(cpu.pc>>8)) // PC high byte
-	cpu.tick()
-	cpu.sp -= 1
-	cpu.bus.Write(cpu.sp, byte(cpu.pc&0xFF)) // PC low byte
-	cpu.pc = addr
-	cpu.tick()
 }
