@@ -6,11 +6,7 @@ func (cpu *CPU) handleInterrupt() {
 	pending := IE & IF
 	for i := range 5 {
 		if (pending & (1 << i)) != 0 {
-			// Limpia bit correspondiente en IF
 
-			cpu.bus.Write(0xFF0F, IF&^(1<<i))
-
-			cpu.ime = false
 			cpu.tick() // 2 M cycles de espera
 			cpu.tick()
 			// Push PC a la pila
@@ -20,9 +16,15 @@ func (cpu *CPU) handleInterrupt() {
 			cpu.tick()
 			cpu.pushPC(byte(pc & 0xFF))
 
+			// Limpia bit correspondiente en IF
+			cpu.bus.Write(0xFF0F, IF&^(1<<i))
+
 			// Salta al vector
 			cpu.tick()
 			cpu.pc = uint16(0x40 + i*8)
+
+			// Desactivar IME
+			cpu.ime = false
 
 			break
 		}

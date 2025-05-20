@@ -74,6 +74,10 @@ func (b *Bus) Read(addr uint16) byte {
 		return 0xFF
 
 	case addr >= 0xFF00 && addr < 0xFF80:
+		// El registro IF los bits 5, 6 y 7 siempre deben leerse con 1 y no con 0
+		if addr == 0xFF0F {
+			return b.IO[addr-0xFF00] | 0xE0
+		}
 		return b.IO[addr-0xFF00]
 
 	case addr >= 0xFF80 && addr < 0xFFFF:
