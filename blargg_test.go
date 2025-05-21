@@ -86,8 +86,6 @@ func runTestROM(path string) bool {
 
 	for range 20 {
 		for range 400_000 {
-			//c := gameCPU.Step()
-			//gamePPU.Step(c)
 			gameCPU.Step()
 		}
 		// Inspecciona el texto en pantalla (desde VRAM)
