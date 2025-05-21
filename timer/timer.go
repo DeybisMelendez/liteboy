@@ -21,12 +21,17 @@ func NewTimer(bus *bus.Bus) *Timer {
 
 func (t *Timer) Step(tCycles int) {
 	t.bus.Client = 2
+	if t.bus.TACWrite {
+		t.OnTACWrite(t.bus.TACOld, t.bus.Read(TACRegister))
+		t.bus.TACWrite = false
+	}
 	if t.bus.TimerReloading {
 		t.bus.Write(TIMARegister, t.bus.Read(TMARegister))
 		ifReg := t.bus.Read(IFRegister)
 		t.bus.Write(IFRegister, ifReg|0x04)
 		t.bus.TimerReloading = false
 	}
+
 	// Manejo de reinicio de DIV
 	if t.bus.ResetDIV {
 		t.checkFallingEdge()
@@ -100,4 +105,24 @@ func getTimerBitIndex(tac byte) uint {
 		return 7 // 256 ciclos
 	}
 	return 0
+}
+func (t *Timer) OnTACWrite(oldTAC, newTAC byte) {
+	oldEnabled := oldTAC & 0x04
+	newEnabled := newTAC & 0x04
+
+	oldBitIndex := getTimerBitIndex(oldTAC)
+	newBitIndex := getTimerBitIndex(newTAC)
+
+	oldBit := (t.internalCounter >> oldBitIndex) & 1
+	newBit := (t.internalCounter >> newBitIndex) & 1
+
+	if oldEnabled != 0 && newEnabled != 0 && oldBitIndex == newBitIndex {
+		// Timer sigue encendido y misma frecuencia: no hacer nada especial
+		return
+	}
+
+	// Detectar flanco de bajada como en el hardware
+	if oldEnabled != 0 && oldBit == 1 && (newEnabled == 0 || newBit == 0) {
+		t.incrementTIMA()
+	}
 }

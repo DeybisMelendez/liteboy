@@ -38,6 +38,8 @@ type Bus struct {
 	DMAIsActive      bool
 	TimerReloading   bool
 	enableDMA        bool
+	TACWrite         bool
+	TACOld           byte
 	dmaSource        uint16
 	dmaIndex         uint16
 	dmaCyclesLeft    byte
@@ -125,6 +127,12 @@ func (b *Bus) Write(addr uint16, value byte) {
 			b.IO[addr-0xFF00] = value
 			return
 		}*/
+		if addr == TACRegister {
+			b.TACWrite = true
+			b.TACOld = b.IO[addr-0xFF00]
+			b.IO[addr-0xFF00] = value
+		}
+
 		// Si se intenta escribir en DIV se establece en 0
 		//https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
 		if b.Client == ClientCPU && addr == DIVRegister {
