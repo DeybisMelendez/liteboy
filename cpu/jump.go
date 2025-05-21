@@ -13,7 +13,7 @@ func (cpu *CPU) ret() {
 
 // suma 12 tcycles
 func (cpu *CPU) call16(addr uint16) {
-	cpu.tick()
+	cpu.tick() // Internal Delay
 	cpu.sp -= 1
 	cpu.bus.Write(cpu.sp, byte(cpu.pc>>8)) // PC high byte
 	cpu.tick()

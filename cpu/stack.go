@@ -17,12 +17,12 @@ func (cpu *CPU) pop16(set func(uint16)) {
 
 // suma 12 tcycles
 func (cpu *CPU) push16(value uint16) {
+	cpu.tick() // Internal Delay
 	cpu.sp--
 	cpu.bus.Write(cpu.sp, byte(value>>8))
 	cpu.tick()
 	cpu.sp--
 	cpu.bus.Write(cpu.sp, byte(value&0xFF))
-	cpu.tick()
 	cpu.tick() // Espera extra
 }
 
