@@ -36,6 +36,7 @@ type Bus struct {
 	ResetDIV bool
 	// DMA
 	DMAIsActive      bool
+	TimerReloading   bool
 	enableDMA        bool
 	dmaSource        uint16
 	dmaIndex         uint16
@@ -119,6 +120,11 @@ func (b *Bus) Write(addr uint16, value byte) {
 		log.Printf("Intento de escritura en zona no usable en %04X: %02X por cliente %d\n", addr, value, b.Client)
 
 	case addr >= 0xFF00 && addr < 0xFF80:
+		/*if addr == TIMARegister && b.TimerReloading {
+			b.TimerReloading = false
+			b.IO[addr-0xFF00] = value
+			return
+		}*/
 		// Si se intenta escribir en DIV se establece en 0
 		//https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
 		if b.Client == ClientCPU && addr == DIVRegister {

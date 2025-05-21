@@ -21,7 +21,12 @@ func NewTimer(bus *bus.Bus) *Timer {
 
 func (t *Timer) Step(tCycles int) {
 	t.bus.Client = 2
-
+	if t.bus.TimerReloading {
+		t.bus.Write(TIMARegister, t.bus.Read(TMARegister))
+		ifReg := t.bus.Read(IFRegister)
+		t.bus.Write(IFRegister, ifReg|0x04)
+		t.bus.TimerReloading = false
+	}
 	// Manejo de reinicio de DIV
 	if t.bus.ResetDIV {
 		t.checkFallingEdge()
@@ -76,9 +81,8 @@ func (t *Timer) checkFallingEdge() {
 func (t *Timer) incrementTIMA() {
 	tima := t.bus.Read(TIMARegister)
 	if tima == 0xFF {
-		t.bus.Write(TIMARegister, t.bus.Read(TMARegister))
-		ifReg := t.bus.Read(IFRegister)
-		t.bus.Write(IFRegister, ifReg|0x04)
+		t.bus.Write(TIMARegister, 0x00)
+		t.bus.TimerReloading = true
 	} else {
 		t.bus.Write(TIMARegister, tima+1)
 	}
