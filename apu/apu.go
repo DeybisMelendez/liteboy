@@ -18,10 +18,13 @@ type APU struct {
 	bus     *bus.Bus
 	chan1   *SquareChannel
 	chan2   *SquareChannel
+	chan3   *WaveChannel
 	player1 *audio.Player
 	player2 *audio.Player
+	player3 *audio.Player
 	reader1 *squareWaveReader
 	reader2 *squareWaveReader
+	reader3 *waveReader
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -29,8 +32,10 @@ func NewAPU(bus *bus.Bus) *APU {
 
 	ch1 := &SquareChannel{}
 	ch2 := &SquareChannel{}
+	ch3 := &WaveChannel{}
 	reader1 := &squareWaveReader{channel: ch1}
 	reader2 := &squareWaveReader{channel: ch2}
+	reader3 := &waveReader{channel: ch3}
 
 	player1, err := audio.NewPlayer(ctx, reader1)
 	if err != nil {
@@ -40,25 +45,35 @@ func NewAPU(bus *bus.Bus) *APU {
 	if err != nil {
 		log.Fatal("error al crear audio player canal 2:", err)
 	}
-
+	player3, err := audio.NewPlayer(ctx, reader3)
+	if err != nil {
+		log.Fatal("error al crear audio player canal 3:", err)
+	}
 	player1.Play()
 	player2.Play()
+	player3.Play()
 
 	return &APU{
 		audio:   ctx,
 		bus:     bus,
 		chan1:   ch1,
 		chan2:   ch2,
+		chan3:   ch3,
 		player1: player1,
 		player2: player2,
+		player3: player3,
 		reader1: reader1,
 		reader2: reader2,
+		reader3: reader3,
 	}
+
 }
 
 func (apu *APU) Step() {
 	apu.updateChannel1()
 	apu.updateChannel2()
+	apu.updateChannel3()
+
 }
 
 func (apu *APU) updateChannel1() {
@@ -203,5 +218,53 @@ func (apu *APU) updateChannel2() {
 		if c.lengthTimer == 0 {
 			c.enabled = false
 		}
+	}
+}
+func (apu *APU) updateChannel3() {
+	c := apu.chan3
+
+	nr30 := apu.bus.Read(0xFF1A)
+	nr31 := apu.bus.Read(0xFF1B)
+	nr32 := apu.bus.Read(0xFF1C)
+	nr33 := apu.bus.Read(0xFF1D)
+	nr34 := apu.bus.Read(0xFF1E)
+
+	if nr30&0x80 == 0 {
+		c.enabled = false
+		return
+	}
+
+	if nr34&0x80 != 0 {
+		c.enabled = true
+		c.triggered = true
+		c.lengthTimer = 256 - int(nr31)
+		c.wavePos = 0
+
+		switch (nr32 >> 5) & 0x03 {
+		case 0:
+			c.volumeShift = 0
+		case 1:
+			c.volumeShift = 1
+		case 2:
+			c.volumeShift = 2
+		case 3:
+			c.volumeShift = 3
+		}
+
+		freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
+		c.frequency = 65536.0 / float64(2048-freq)
+	}
+
+	// Length timer
+	if c.lengthTimer > 0 {
+		c.lengthTimer--
+		if c.lengthTimer == 0 {
+			c.enabled = false
+		}
+	}
+
+	// Wave RAM update (0xFF30–0xFF3F)
+	for i := 0; i < 16; i++ {
+		c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
 	}
 }

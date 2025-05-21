@@ -18,3 +18,13 @@ type SquareChannel struct {
 	triggered     bool
 	phase         float64
 }
+type WaveChannel struct {
+	enabled     bool
+	triggered   bool
+	lengthTimer int
+	volumeShift int
+	frequency   float64
+	phase       float64
+	waveRAM     [32]byte // 32 muestras de 4 bits
+	wavePos     int
+}
