@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/deybismelendez/liteboy/apu"
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
@@ -19,6 +20,7 @@ const (
 type Liteboy struct {
 	cpu         *cpu.CPU
 	ppu         *ppu.PPU
+	apu         *apu.APU
 	bus         *bus.Bus
 	cycles      int
 	targetTPS   int
@@ -27,10 +29,11 @@ type Liteboy struct {
 	image       *ebiten.Image
 }
 
-func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus) *Liteboy {
+func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus, apu *apu.APU) *Liteboy {
 	return &Liteboy{
 		cpu:         cpu,
 		ppu:         ppu,
+		apu:         apu,
 		bus:         bus,
 		image:       ebiten.NewImage(ScreenWidth, ScreenHeight),
 		tpsMode:     []int{70224, 70224 * 2, 70224 * 3, 70224 * 4},
@@ -44,6 +47,7 @@ func (liteboy *Liteboy) Update() error {
 	for liteboy.cycles < liteboy.tpsMode[liteboy.targetTPS] {
 		liteboy.cycles += liteboy.cpu.Step()
 		liteboy.handleGamepad()
+		liteboy.apu.Step()
 
 	}
 	liteboy.handleKeyboard()

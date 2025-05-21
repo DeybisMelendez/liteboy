@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/deybismelendez/liteboy/apu"
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
@@ -32,8 +33,8 @@ func main() {
 	gamePPU := ppu.NewPPU(gameBus)
 	gameTimer := timer.NewTimer(gameBus)
 	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
-
-	game := NewLiteboy(gameCPU, gamePPU, gameBus)
+	gameAPU := apu.NewAPU(gameBus)
+	game := NewLiteboy(gameCPU, gamePPU, gameBus, gameAPU)
 
 	// Configurar ventana y correr el loop de Ebiten
 	ebiten.SetWindowSize(ScreenWidth*Scale, ScreenHeight*Scale)
