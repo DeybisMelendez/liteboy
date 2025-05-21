@@ -19,12 +19,15 @@ type APU struct {
 	chan1   *SquareChannel
 	chan2   *SquareChannel
 	chan3   *WaveChannel
+	chan4   *NoiseChannel
 	player1 *audio.Player
 	player2 *audio.Player
 	player3 *audio.Player
+	player4 *audio.Player
 	reader1 *squareWaveReader
 	reader2 *squareWaveReader
 	reader3 *waveReader
+	reader4 *noiseReader
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -33,9 +36,11 @@ func NewAPU(bus *bus.Bus) *APU {
 	ch1 := &SquareChannel{}
 	ch2 := &SquareChannel{}
 	ch3 := &WaveChannel{}
+	ch4 := &NoiseChannel{}
 	reader1 := &squareWaveReader{channel: ch1}
 	reader2 := &squareWaveReader{channel: ch2}
 	reader3 := &waveReader{channel: ch3}
+	reader4 := &noiseReader{channel: ch4}
 
 	player1, err := audio.NewPlayer(ctx, reader1)
 	if err != nil {
@@ -49,9 +54,14 @@ func NewAPU(bus *bus.Bus) *APU {
 	if err != nil {
 		log.Fatal("error al crear audio player canal 3:", err)
 	}
+	player4, err := audio.NewPlayer(ctx, reader4)
+	if err != nil {
+		log.Fatal("error al crear audio player canal 4:", err)
+	}
 	player1.Play()
 	player2.Play()
 	player3.Play()
+	player4.Play()
 
 	return &APU{
 		audio:   ctx,
@@ -59,12 +69,15 @@ func NewAPU(bus *bus.Bus) *APU {
 		chan1:   ch1,
 		chan2:   ch2,
 		chan3:   ch3,
+		chan4:   ch4,
 		player1: player1,
 		player2: player2,
 		player3: player3,
+		player4: player4,
 		reader1: reader1,
 		reader2: reader2,
 		reader3: reader3,
+		reader4: reader4,
 	}
 
 }
@@ -73,7 +86,7 @@ func (apu *APU) Step() {
 	apu.updateChannel1()
 	apu.updateChannel2()
 	apu.updateChannel3()
-
+	apu.updateChannel4()
 }
 
 func (apu *APU) updateChannel1() {
@@ -266,5 +279,51 @@ func (apu *APU) updateChannel3() {
 	// Wave RAM update (0xFF30–0xFF3F)
 	for i := 0; i < 16; i++ {
 		c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
+	}
+}
+func (apu *APU) updateChannel4() {
+	c := apu.chan4
+
+	nr41 := apu.bus.Read(0xFF20)
+	nr42 := apu.bus.Read(0xFF21)
+	nr43 := apu.bus.Read(0xFF22)
+	nr44 := apu.bus.Read(0xFF23)
+
+	if nr44&0x80 != 0 {
+		c.enabled = true
+		c.triggered = true
+		c.lengthTimer = 64 - int(nr41&0x3F)
+		c.initialVolume = int(nr42 >> 4)
+		c.volume = float64(c.initialVolume) / 15.0
+		c.envelopeDir = 1
+		if nr42&0x08 == 0 {
+			c.envelopeDir = -1
+		}
+		c.envelopeStep = int(nr42 & 0x07)
+		c.envelopeTimer = c.envelopeStep
+		c.clockShift = int(nr43 >> 4)
+		c.widthMode = (nr43 & 0x08) != 0
+		c.divisorCode = int(nr43 & 0x07)
+	}
+
+	// Envelope
+	if c.envelopeStep > 0 {
+		c.envelopeTimer--
+		if c.envelopeTimer <= 0 {
+			c.envelopeTimer = c.envelopeStep
+			newVolume := c.initialVolume + c.envelopeDir
+			if newVolume >= 0 && newVolume <= 15 {
+				c.initialVolume = newVolume
+				c.volume = float64(c.initialVolume) / 15.0
+			}
+		}
+	}
+
+	// Length timer
+	if c.lengthTimer > 0 {
+		c.lengthTimer--
+		if c.lengthTimer == 0 {
+			c.enabled = false
+		}
 	}
 }

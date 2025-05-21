@@ -74,3 +74,39 @@ func (r *waveReader) Read(p []byte) (int, error) {
 
 	return len(p), nil
 }
+
+type noiseReader struct {
+	channel *NoiseChannel
+	lfsr    uint16
+}
+
+func (r *noiseReader) Read(p []byte) (int, error) {
+	c := r.channel
+	for i := 0; i < len(p); i += 2 {
+		var sample int16 = 0
+		if c.enabled {
+			if r.lfsr == 0 {
+				r.lfsr = 0x7FFF // Inicializar si es cero
+			}
+
+			// LFSR
+			bit := (r.lfsr ^ (r.lfsr >> 1)) & 1
+			r.lfsr = (r.lfsr >> 1) | (bit << 14)
+
+			if c.widthMode {
+				// LFSR de 7 bits
+				r.lfsr &= ^uint16(1 << 6)
+				r.lfsr |= (bit << 6)
+			}
+
+			if r.lfsr&1 == 0 {
+				sample = int16(c.volume * 32767)
+			} else {
+				sample = -int16(c.volume * 32767)
+			}
+		}
+
+		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
+	}
+	return len(p), nil
+}

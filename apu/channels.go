@@ -28,3 +28,17 @@ type WaveChannel struct {
 	waveRAM     [32]byte // 32 muestras de 4 bits
 	wavePos     int
 }
+
+type NoiseChannel struct {
+	enabled       bool
+	triggered     bool
+	lengthTimer   int
+	volume        float64
+	initialVolume int
+	envelopeStep  int
+	envelopeTimer int
+	envelopeDir   int
+	clockShift    int
+	widthMode     bool
+	divisorCode   int
+}
