@@ -7,6 +7,7 @@ const (
 	TIMARegister = 0xFF05
 	TMARegister  = 0xFF06
 	TACRegister  = 0xFF07
+	IFRegister   = 0xFF0F
 )
 
 type Timer struct {
@@ -15,60 +16,84 @@ type Timer struct {
 }
 
 func NewTimer(bus *bus.Bus) *Timer {
-	return &Timer{
-		bus: bus,
+	return &Timer{bus: bus}
+}
+
+func (t *Timer) Step(tCycles int) {
+	t.bus.Client = 2
+
+	// Manejo de reinicio de DIV
+	if t.bus.ResetDIV {
+		t.checkFallingEdge()
+		t.internalCounter = 0
+		t.bus.ResetDIV = false
+	}
+
+	oldCounter := t.internalCounter
+	t.internalCounter += uint16(tCycles)
+
+	t.updateDIV(oldCounter)
+	t.updateTIMA(oldCounter)
+}
+
+func (t *Timer) updateDIV(oldCounter uint16) {
+	oldDIV := byte(oldCounter >> 8)
+	newDIV := byte(t.internalCounter >> 8)
+	if oldDIV != newDIV {
+		t.bus.Write(DIVRegister, newDIV)
 	}
 }
 
-func (timer *Timer) Step(tCycles int) {
-	timer.bus.Client = 2
-	// Hack para resetear DIV
-	if timer.bus.ResetDIV {
-		timer.internalCounter = 0
-		timer.bus.ResetDIV = false
-	}
-	// Guardamos el estado anterior
-	oldCounter := timer.internalCounter
-	timer.internalCounter += uint16(tCycles)
-
-	// --- DIV update (upper 8 bits of counter) ---
-	oldDIV := byte(oldCounter >> 8)
-	newDIV := byte(timer.internalCounter >> 8)
-	if newDIV != oldDIV {
-		timer.bus.Write(DIVRegister, newDIV)
-	}
-
-	// --- TIMA update ---
-	tac := timer.bus.Read(TACRegister)
+func (t *Timer) updateTIMA(oldCounter uint16) {
+	tac := t.bus.Read(TACRegister)
 	if tac&0x04 == 0 {
-		return // timer disabled
+		return // Timer deshabilitado
 	}
 
-	// Determine bit to watch based on TAC
-	var bitIndex uint
+	bitIndex := getTimerBitIndex(tac)
+	oldBit := (oldCounter >> bitIndex) & 1
+	newBit := (t.internalCounter >> bitIndex) & 1
+
+	if oldBit == 1 && newBit == 0 {
+		t.incrementTIMA()
+	}
+}
+
+func (t *Timer) checkFallingEdge() {
+	tac := t.bus.Read(TACRegister)
+	if tac&0x04 == 0 {
+		return // Timer deshabilitado
+	}
+
+	bitIndex := getTimerBitIndex(tac)
+	oldBit := (t.internalCounter >> bitIndex) & 1
+
+	if oldBit == 1 {
+		t.incrementTIMA()
+	}
+}
+
+func (t *Timer) incrementTIMA() {
+	tima := t.bus.Read(TIMARegister)
+	if tima == 0xFF {
+		t.bus.Write(TIMARegister, t.bus.Read(TMARegister))
+		ifReg := t.bus.Read(IFRegister)
+		t.bus.Write(IFRegister, ifReg|0x04)
+	} else {
+		t.bus.Write(TIMARegister, tima+1)
+	}
+}
+
+func getTimerBitIndex(tac byte) uint {
 	switch tac & 0x03 {
 	case 0:
-		bitIndex = 9 // 1024 cycles
+		return 9 // 1024 ciclos
 	case 1:
-		bitIndex = 3 // 16 cycles
+		return 3 // 16 ciclos
 	case 2:
-		bitIndex = 5 // 64 cycles
+		return 5 // 64 ciclos
 	case 3:
-		bitIndex = 7 // 256 cycles
+		return 7 // 256 ciclos
 	}
-
-	oldBit := (oldCounter >> bitIndex) & 1
-	newBit := (timer.internalCounter >> bitIndex) & 1
-
-	// Detect flanco descendente: 1 -> 0
-	if oldBit == 1 && newBit == 0 {
-		tima := timer.bus.Read(TIMARegister)
-		if tima == 0xFF {
-			timer.bus.Write(TIMARegister, timer.bus.Read(TMARegister))
-			ifReg := timer.bus.Read(0xFF0F)
-			timer.bus.Write(0xFF0F, ifReg|0x04)
-		} else {
-			timer.bus.Write(TIMARegister, tima+1)
-		}
-	}
+	return 0
 }

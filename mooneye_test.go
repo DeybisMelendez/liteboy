@@ -46,14 +46,14 @@ var mooneyeAcceptance = map[string]string{
 	"ppu/intr_2_oam_ok_timing":        "roms/mooneye/acceptance/ppu/intr_2_oam_ok_timing.gb",
 	"ppu/stat_irq_blocking":           "roms/mooneye/acceptance/ppu/stat_irq_blocking.gb",
 	"ppu/stat_lyc_onoff":              "roms/mooneye/acceptance/ppu/stat_lyc_onoff.gb",*/
-	"push_timing":      "roms/mooneye/acceptance/push_timing.gb",
-	"rapid_di_ei":      "roms/mooneye/acceptance/rapid_di_ei.gb",
-	"reti_intr_timing": "roms/mooneye/acceptance/reti_intr_timing.gb",
-	"reti_timing":      "roms/mooneye/acceptance/reti_timing.gb",
-	"ret_cc_timing":    "roms/mooneye/acceptance/ret_cc_timing.gb",
-	"ret_timing":       "roms/mooneye/acceptance/ret_timing.gb",
-	"rst_timing":       "roms/mooneye/acceptance/rst_timing.gb",
-	/*"timer/div_write":            "roms/mooneye/acceptance/timer/div_write.gb",
+	"push_timing":                "roms/mooneye/acceptance/push_timing.gb",
+	"rapid_di_ei":                "roms/mooneye/acceptance/rapid_di_ei.gb",
+	"reti_intr_timing":           "roms/mooneye/acceptance/reti_intr_timing.gb",
+	"reti_timing":                "roms/mooneye/acceptance/reti_timing.gb",
+	"ret_cc_timing":              "roms/mooneye/acceptance/ret_cc_timing.gb",
+	"ret_timing":                 "roms/mooneye/acceptance/ret_timing.gb",
+	"rst_timing":                 "roms/mooneye/acceptance/rst_timing.gb",
+	"timer/div_write":            "roms/mooneye/acceptance/timer/div_write.gb",
 	"timer/rapid_toggle":         "roms/mooneye/acceptance/timer/rapid_toggle.gb",
 	"timer/tim00_div_trigger":    "roms/mooneye/acceptance/timer/tim00_div_trigger.gb",
 	"timer/tim00":                "roms/mooneye/acceptance/timer/tim00.gb",
@@ -65,7 +65,7 @@ var mooneyeAcceptance = map[string]string{
 	"timer/tim11":                "roms/mooneye/acceptance/timer/tim11.gb",
 	"timer/tima_reload":          "roms/mooneye/acceptance/timer/tima_reload.gb",
 	"timer/tima_write_reloading": "roms/mooneye/acceptance/timer/tima_write_reloading.gb",
-	"timer/tma_write_reloading":  "roms/mooneye/acceptance/timer/tma_write_reloading.gb",*/
+	"timer/tma_write_reloading":  "roms/mooneye/acceptance/timer/tma_write_reloading.gb",
 }
 
 func TestMooneyeAcceptance(t *testing.T) {
