@@ -95,7 +95,7 @@ func (c *WaveChannel) GetSample() int {
 	delta := c.frequency * 32.0 / sampleRate
 	c.phase += delta
 	if c.phase >= 32 {
-		c.phase -= 32
+		c.phase = 0
 	}
 
 	idx := int(c.phase) // 0..31
