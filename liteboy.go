@@ -42,15 +42,17 @@ func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus, apu *apu.APU) *Liteboy
 }
 
 func (liteboy *Liteboy) Update() error {
-	// Ejecutamos ciclos hasta llegar al target para refrescar la pantalla
-
+	cyclesBefore := liteboy.cycles
 	for liteboy.cycles < liteboy.tpsMode[liteboy.targetTPS] {
 		liteboy.cycles += liteboy.cpu.Step()
 		liteboy.handleGamepad()
-		liteboy.apu.Step()
-
 	}
+	cyclesPassed := liteboy.cycles - cyclesBefore
+
 	liteboy.handleKeyboard()
+	liteboy.apu.Step(cyclesPassed) // Pasamos ciclos reales transcurridos
+
+	// Renderizado
 	liteboy.image.WritePixels(liteboy.ppu.Framebuffer)
 	liteboy.cycles -= liteboy.tpsMode[liteboy.targetTPS]
 

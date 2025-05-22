@@ -11,6 +11,8 @@ const (
 	sampleRate      = 44100
 	frameRate       = 60
 	samplesPerFrame = sampleRate / frameRate
+	cpuClockSpeed   = 4194304.0 // Hz CPU real Game Boy
+
 )
 
 type APU struct {
@@ -82,11 +84,20 @@ func NewAPU(bus *bus.Bus) *APU {
 
 }
 
-func (apu *APU) Step() {
+func (apu *APU) Step(cyclesPassed int) {
+	// Convierte ciclos en segundos, asumiendo CPU clock
+	secondsPassed := float64(cyclesPassed) / cpuClockSpeed // cpuClockSpeed define la frecuencia CPU en Hz
+
 	apu.updateChannel1()
 	apu.updateChannel2()
 	apu.updateChannel3()
 	apu.updateChannel4()
+
+	// Avanza la fase de cada canal según tiempo pasado y frecuencia
+	apu.reader1.advancePhase(secondsPassed)
+	apu.reader2.advancePhase(secondsPassed)
+	apu.reader3.advancePhase(secondsPassed)
+	apu.reader4.advancePhase(secondsPassed)
 }
 
 func (apu *APU) updateChannel1() {
