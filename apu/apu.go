@@ -26,6 +26,7 @@ type APU struct {
 	reader2 *squareWaveReader
 	reader3 *waveReader
 	reader4 *noiseReader
+	ticks   int
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -81,13 +82,14 @@ func NewAPU(bus *bus.Bus) *APU {
 }
 
 func (apu *APU) Step() {
-	// Convierte ciclos en segundos, asumiendo CPU clock
-	//secondsPassed := float64(4) / cpuClockSpeed // cpuClockSpeed define la frecuencia CPU en Hz
-
-	apu.updateChannel1()
-	apu.updateChannel2()
-	apu.updateChannel3()
-	apu.updateChannel4()
+	if apu.ticks >= 24 {
+		apu.ticks -= 24
+		apu.updateChannel1()
+		apu.updateChannel2()
+		//apu.updateChannel3()
+		//apu.updateChannel4()
+	}
+	apu.ticks++
 }
 
 func (apu *APU) updateChannel1() {
@@ -200,7 +202,7 @@ func (apu *APU) updateChannel2() {
 		c.envelopeTimer = c.envelopeStep
 
 		freq := uint16(nr23) | (uint16(nr24&0x07) << 8)
-		c.frequency = 131072.0 / float64(2048-freq)
+		c.frequency = 131072.0 / (2048 - float64(freq))
 
 		// Duty
 		switch (nr21 >> 6) & 0x03 {
@@ -240,37 +242,50 @@ func (apu *APU) updateChannel3() {
 	c := apu.chan3
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	nr30 := apu.bus.Read(0xFF1A)
 	nr31 := apu.bus.Read(0xFF1B)
 	nr32 := apu.bus.Read(0xFF1C)
 	nr33 := apu.bus.Read(0xFF1D)
 	nr34 := apu.bus.Read(0xFF1E)
 
+	// Channel enabled
 	if nr30&0x80 == 0 {
 		c.enabled = false
 		return
 	}
 
+	// Trigger check
 	if nr34&0x80 != 0 {
 		c.enabled = true
 		c.triggered = true
 		c.lengthTimer = 256 - int(nr31)
 		c.wavePos = 0
+		c.phase = 0.0
+
+		// Load wave RAM ONCE (optional: you could load only on CPU writes)
+		for i := 0; i < 16; i++ {
+			c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
+		}
 
 		switch (nr32 >> 5) & 0x03 {
 		case 0:
-			c.volumeShift = 0
+			c.volumeShift = -1 // Special case: mute
 		case 1:
-			c.volumeShift = 1
+			c.volumeShift = 0 // 100%
 		case 2:
-			c.volumeShift = 2
+			c.volumeShift = 1 // 50%
 		case 3:
-			c.volumeShift = 3
+			c.volumeShift = 2 // 25%
 		}
-
-		freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
-		c.frequency = 65536.0 / float64(2048-freq)
 	}
+
+	// Update frequency from current NR33/NR34
+	freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
+	if freq >= 2048 {
+		freq = 2047
+	}
+	c.frequency = 131072.0 / float64(2048-freq)
 
 	// Length timer
 	if c.lengthTimer > 0 {
@@ -279,12 +294,8 @@ func (apu *APU) updateChannel3() {
 			c.enabled = false
 		}
 	}
-
-	// Wave RAM update (0xFF30–0xFF3F)
-	for i := 0; i < 16; i++ {
-		c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
-	}
 }
+
 func (apu *APU) updateChannel4() {
 	c := apu.chan4
 	c.mu.Lock()
