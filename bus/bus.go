@@ -15,6 +15,7 @@ const (
 	ClientPPU     = 1
 	ClientTimer   = 2
 	ClientDMA     = 3
+	ClientAPU     = 4
 	ClientLiteBoy = 255
 )
 
@@ -188,6 +189,8 @@ func (b *Bus) isAccessible(addr uint16) bool {
 			return true
 		}
 		return false
+	case ClientAPU:
+		return true
 	case ClientLiteBoy:
 		return true
 	default:

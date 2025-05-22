@@ -19,7 +19,6 @@ type APU struct {
 	chan3  *WaveChannel
 	chan4  *NoiseChannel
 	player *audio.Player
-	ticks  int
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -27,13 +26,22 @@ func NewAPU(bus *bus.Bus) *APU {
 
 	ch1 := &SquareChannel{}
 	ch2 := &SquareChannel{}
-	ch3 := &WaveChannel{}
+	ch3 := &WaveChannel{bus: bus}
 	ch4 := &NoiseChannel{}
 	reader := &Reader{ch1: ch1, ch2: ch2, ch3: ch3, ch4: ch4}
 
 	player, err := ctx.NewPlayer(reader)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 1:", err)
+	}
+	// Inicializar waveform RAM con patrón 00 FF 00 FF ...
+	for i := uint16(0); i < 0x10; i++ {
+		var addr uint16 = 0xFF30 + i
+		if i&2 == 0 {
+			bus.Write(addr, 0x00)
+		} else {
+			bus.Write(addr, 0xFF)
+		}
 	}
 
 	player.Play()
@@ -51,14 +59,11 @@ func NewAPU(bus *bus.Bus) *APU {
 }
 
 func (apu *APU) Step() {
-	if apu.ticks >= 24 {
-		apu.ticks -= 24
-		apu.updateChannel1()
-		apu.updateChannel2()
-		apu.updateChannel3()
-		//apu.updateChannel4()
-	}
-	apu.ticks++
+	apu.bus.Client = 4
+	apu.updateChannel1()
+	apu.updateChannel2()
+	apu.updateChannel3()
+	//apu.updateChannel4()
 }
 
 func (apu *APU) updateChannel1() {
@@ -186,26 +191,20 @@ func (apu *APU) updateChannel3() {
 	nr33 := apu.bus.Read(0xFF1D)
 	nr34 := apu.bus.Read(0xFF1E)
 
-	if nr30&0x80 == 0 {
-		c.enabled = false
-		return
-	}
-
+	// Trigger
 	if nr34&0x80 != 0 {
-		c.enabled = true
+		c.enabled = (nr30 & 0x80) != 0
 		c.triggered = true
 		c.lengthTimer = 256 - int(nr31)
-		c.wavePos = 1
-		c.phase = 0.0
-
 		// Cargar wave RAM
 		for i := 0; i < 16; i++ {
 			c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
 		}
-
-		switch nr32 >> 5 {
+		// Volume shift (NR32 bits 5-6)
+		code := (nr32 >> 5) & 0x03
+		switch code {
 		case 0:
-			c.volumeShift = -1 // Silencio
+			c.volumeShift = -1 // mute
 		case 1:
 			c.volumeShift = 0 // 100%
 		case 2:
@@ -213,19 +212,24 @@ func (apu *APU) updateChannel3() {
 		case 3:
 			c.volumeShift = 2 // 25%
 		}
+
+		// Frequency
+		freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
+		c.frequency = 65536.0 / (2048.0 - float64(freq))
+
+		// Load wave RAM
+		for i := uint16(0); i < 16; i++ {
+			c.waveRAM[i] = apu.bus.Read(0xFF30 + i)
+		}
 	}
 
-	// Frecuencia: 131072 / (2048 - freq)
-	freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
-	if freq >= 2048 {
-		freq = 2047
+	// Length timer
+	if (nr34 & 0x40) != 0 {
+		c.updateLengthTimer()
 	}
-	c.frequency = 2097152.0 / (2.0 * float64(2048-freq))
-	//c.frequency = 131072.0 / float64(2048-freq)
-
-	c.updateLengthTimer()
 }
 
+// updateChannel4 debe inicializar y disparar el canal de ruido
 func (apu *APU) updateChannel4() {
 	c := apu.chan4
 	c.mu.Lock()
@@ -236,14 +240,17 @@ func (apu *APU) updateChannel4() {
 	nr43 := apu.bus.Read(0xFF22)
 	nr44 := apu.bus.Read(0xFF23)
 
+	// Trigger (bit 7 de NR44)
 	if nr44&0x80 != 0 {
 		c.enabled = true
 		c.triggered = true
 
+		// Length timer (si NR44 bit 6 = 1, se usa en step())
 		c.lengthTimer = 64 - int(nr41&0x3F)
 
+		// Envelope (NR42)
 		c.initialVolume = int(nr42 >> 4)
-		c.volume = float64(c.initialVolume)
+		c.volume = float64(c.initialVolume) / 15.0
 		c.envelopeDir = 1
 		if nr42&0x08 == 0 {
 			c.envelopeDir = -1
@@ -251,11 +258,26 @@ func (apu *APU) updateChannel4() {
 		c.envelopeStep = int(nr42 & 0x07)
 		c.envelopeTimer = c.envelopeStep
 
+		// Parámetros de ruido (NR43)
 		c.clockShift = int(nr43 >> 4)
 		c.widthMode = (nr43 & 0x08) != 0
 		c.divisorCode = int(nr43 & 0x07)
+
+		// Reiniciar LFSR
+		c.lfsr = 0x7FFF // 15 bits todos a 1
+		if c.widthMode {
+			c.lfsr = 0x7F // 7 bits todos a 1
+		}
+
+		// Reset del timer
+		c.timer = 0
 	}
 
+	// Length timer automático si NR44 bit 6 = 1
+	if nr44&0x40 != 0 {
+		c.updateLengthTimer()
+	}
+
+	// Envelope
 	c.updateEnvelope()
-	c.updateLengthTimer()
 }

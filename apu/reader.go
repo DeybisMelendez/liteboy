@@ -21,7 +21,6 @@ func (r *Reader) Read(p []byte) (int, error) {
 
 		// Mezcla simple promedio
 		mixed := (s1 + s2 + s3 + s4) / 4
-
 		// Clipping y conversión: limitar a int16
 		if mixed > 32767 {
 			mixed = 32767

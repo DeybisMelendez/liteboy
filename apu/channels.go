@@ -3,10 +3,13 @@ package apu
 import (
 	"math"
 	"sync"
+
+	"github.com/deybismelendez/liteboy/bus"
 )
 
 type Channel struct {
 	enabled       bool
+	frequency     float64
 	lengthTimer   int
 	envelopeStep  int
 	envelopeTimer int
@@ -41,7 +44,6 @@ func (c *Channel) updateEnvelope() {
 type SquareChannel struct {
 	Channel
 	mu           sync.Mutex
-	frequency    float64
 	dutyRatio    float64
 	sweepTime    int
 	sweepCounter int
@@ -76,44 +78,42 @@ type WaveChannel struct {
 	mu          sync.Mutex
 	triggered   bool
 	volumeShift int
-	frequency   float64
 	phase       float64
-	waveRAM     [32]byte // 32 muestras de 4 bits
-	wavePos     int
+	waveRAM     [16]byte // 32 muestras de 4 bits
+	bus         *bus.Bus
 }
 
 func (c *WaveChannel) GetSample() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	freqRatio := c.frequency / sampleRate
-	var sample int = 0
-
-	if c.enabled {
-		index := c.wavePos % 32
-		data := c.waveRAM[index/2]
-		var waveSample byte
-		if index%2 == 0 {
-			waveSample = (data >> 4) & 0x0F
-		} else {
-			waveSample = data & 0x0F
-		}
-
-		if c.volumeShift == -1 {
-			waveSample = 0
-		} else {
-			waveSample >>= c.volumeShift
-		}
-
-		// Escalar a [-32767, 32767] sin distorsión
-		waveValue := int32(waveSample)
-		sample = int((waveValue * 2 * 32767 / 15) - 32767)
-
-		c.phase += freqRatio
-		if c.phase >= 1.0 {
-			c.phase -= 1.0
-			c.wavePos = (c.wavePos + 1) % 32
-		}
+	if !c.enabled || c.volumeShift < 0 {
+		return 0
 	}
-	return sample
+
+	// Avance de fase correcto escalando por 32 muestras
+	delta := c.frequency * 32.0 / sampleRate
+	c.phase += delta
+	if c.phase >= 32 {
+		c.phase -= 32
+	}
+
+	idx := int(c.phase) // 0..31
+	byteIdx := idx / 2  // 0..15
+	isHigh := (idx % 2) == 0
+	raw := c.waveRAM[byteIdx]
+	var sampleValue byte
+	if isHigh {
+		sampleValue = (raw >> 4) & 0x0F
+	} else {
+		sampleValue = raw & 0x0F
+	}
+
+	// Aplicar volumen
+	adjusted := sampleValue >> uint(c.volumeShift)
+	// Normalizar a [-1..1] y luego a int16
+	normalized := (float64(adjusted)/7.5 - 1.0)
+	return int(normalized * 32767)
 }
 
 type NoiseChannel struct {
@@ -127,46 +127,54 @@ type NoiseChannel struct {
 	timer       float64
 }
 
+// GetSample genera una muestra de ruido PCM de 16 bits [-32767, +32767].
 func (c *NoiseChannel) GetSample() int {
-	var sample int = 0
-	// Divisores reales según Game Boy hardware
-	divisors := []int{8, 16, 32, 48, 64, 80, 96, 112}
-	div := 8
-	if c.divisorCode >= 0 && c.divisorCode < len(divisors) {
-		div = divisors[c.divisorCode]
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Si el canal no está encendido o el volumen es cero, no hay salida.
+	if !c.enabled || c.volume == 0 {
+		return 0
 	}
-	if c.enabled && c.volume > 0 {
-		freq := 524288.0 / float64(div<<uint(c.clockShift))
-		if freq < 1 {
-			freq = 1
+
+	// Calcular cuántas muestras deben transcurrir entre actualizaciones del LFSR:
+	// periodCPU = divisor * 2^(clockShift+1) ciclos de CPU (4.194304 MHz)
+	// samplesPerStep = periodCPU / 4194304 * sampleRate
+	div := c.divisorCode
+	if div == 0 {
+		div = 8
+	} else {
+		div *= 16
+	}
+	periodCPU := float64(div) * math.Pow(2, float64(c.clockShift+1))
+	samplesPerStep := periodCPU * sampleRate / 4194304.0
+
+	// Avanzar el timer y actualizar LFSR cuando toque
+	c.timer -= 1.0
+	if c.timer <= 0 {
+		c.timer += samplesPerStep
+
+		// Retroalimentación del LFSR: bit0 xor bit1
+		bit0 := c.lfsr & 1
+		bit1 := (c.lfsr >> 1) & 1
+		feedback := bit0 ^ bit1
+
+		// Desplazar y poner el nuevo bit en posición 14
+		c.lfsr = (c.lfsr >> 1) | (feedback << 14)
+
+		// Si está en modo 7-bit, también actualizar bit6 y enmascarar resto
+		if c.widthMode {
+			c.lfsr = (c.lfsr &^ (1 << 6)) | (feedback << 6)
+			c.lfsr &= 0x7F // solo 7 bits efectivos
 		}
+	}
 
-		c.timer -= 1
-		if c.timer <= 0 {
-			c.timer += sampleRate / freq
-
-			if c.lfsr == 0 {
-				c.lfsr = 0x7FFF
-			}
-
-			// LFSR feedback calculation
-			bit := (c.lfsr ^ (c.lfsr >> 1)) & 1
-			c.lfsr = (c.lfsr >> 1) | (bit << 14)
-
-			if c.widthMode {
-				// 7-bit mode: bit 6 also updated
-				c.lfsr &= ^uint16(1 << 6)
-				c.lfsr |= (bit << 6)
-			}
-		}
-
-		if c.lfsr&1 == 0 {
-			sample = int(c.volume * 32767)
-			//sample = int16(c.volume * 32767 / 15) // normalizado
-		} else {
-			sample = -int(c.volume * 32767)
-			//sample = -int16(c.volume * 32767 / 15)
-		}
+	// Extraer el bit 0 como salida de nivel
+	var sample int
+	if (c.lfsr & 1) == 0 {
+		sample = int(c.volume * 32767)
+	} else {
+		sample = -int(c.volume * 32767)
 	}
 	return sample
 }
