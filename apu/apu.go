@@ -12,21 +12,14 @@ const (
 )
 
 type APU struct {
-	audio   *audio.Context
-	bus     *bus.Bus
-	chan1   *SquareChannel
-	chan2   *SquareChannel
-	chan3   *WaveChannel
-	chan4   *NoiseChannel
-	player1 *audio.Player
-	player2 *audio.Player
-	player3 *audio.Player
-	player4 *audio.Player
-	reader1 *squareWaveReader
-	reader2 *squareWaveReader
-	reader3 *waveReader
-	reader4 *noiseReader
-	ticks   int
+	audio  *audio.Context
+	bus    *bus.Bus
+	chan1  *SquareChannel
+	chan2  *SquareChannel
+	chan3  *WaveChannel
+	chan4  *NoiseChannel
+	player *audio.Player
+	ticks  int
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -36,47 +29,23 @@ func NewAPU(bus *bus.Bus) *APU {
 	ch2 := &SquareChannel{}
 	ch3 := &WaveChannel{}
 	ch4 := &NoiseChannel{}
-	reader1 := &squareWaveReader{channel: ch1}
-	reader2 := &squareWaveReader{channel: ch2}
-	reader3 := &waveReader{channel: ch3}
-	reader4 := &noiseReader{channel: ch4}
+	reader := &Reader{ch1: ch1, ch2: ch2, ch3: ch3, ch4: ch4}
 
-	player1, err := ctx.NewPlayer(reader1)
+	player, err := ctx.NewPlayer(reader)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 1:", err)
 	}
-	player2, err := ctx.NewPlayer(reader2)
-	if err != nil {
-		log.Fatal("error al crear audio player canal 2:", err)
-	}
-	player3, err := ctx.NewPlayer(reader3)
-	if err != nil {
-		log.Fatal("error al crear audio player canal 3:", err)
-	}
-	player4, err := ctx.NewPlayer(reader4)
-	if err != nil {
-		log.Fatal("error al crear audio player canal 4:", err)
-	}
-	player1.Play()
-	player2.Play()
-	player3.Play()
-	player4.Play()
+
+	player.Play()
 
 	return &APU{
-		audio:   ctx,
-		bus:     bus,
-		chan1:   ch1,
-		chan2:   ch2,
-		chan3:   ch3,
-		chan4:   ch4,
-		player1: player1,
-		player2: player2,
-		player3: player3,
-		player4: player4,
-		reader1: reader1,
-		reader2: reader2,
-		reader3: reader3,
-		reader4: reader4,
+		audio:  ctx,
+		bus:    bus,
+		chan1:  ch1,
+		chan2:  ch2,
+		chan3:  ch3,
+		chan4:  ch4,
+		player: player,
 	}
 
 }
@@ -84,10 +53,10 @@ func NewAPU(bus *bus.Bus) *APU {
 func (apu *APU) Step() {
 	if apu.ticks >= 24 {
 		apu.ticks -= 24
-		//apu.updateChannel1()
-		//apu.updateChannel2()
+		apu.updateChannel1()
+		apu.updateChannel2()
 		apu.updateChannel3()
-		apu.updateChannel4()
+		//apu.updateChannel4()
 	}
 	apu.ticks++
 }
@@ -146,15 +115,17 @@ func (apu *APU) updateChannel1() {
 		if c.sweepCounter >= c.sweepTime {
 			c.sweepCounter = 0
 			change := c.shadowFreq >> uint16(c.sweepShift)
+			nextFreq := c.shadowFreq
 			if c.sweepDir < 0 {
-				c.shadowFreq -= change
+				nextFreq -= change
 			} else {
-				c.shadowFreq += change
+				nextFreq += change
 			}
-			if c.shadowFreq > 2047 {
+			if nextFreq > 2047 {
 				c.enabled = false
 			} else {
-				c.frequency = 131072.0 / float64(2048-c.shadowFreq)
+				c.shadowFreq = nextFreq
+				c.frequency = 131072.0 / float64(2048-nextFreq)
 			}
 		}
 	}
@@ -232,7 +203,7 @@ func (apu *APU) updateChannel3() {
 			c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
 		}
 
-		switch (nr32 >> 5) & 0x03 {
+		switch nr32 >> 5 {
 		case 0:
 			c.volumeShift = -1 // Silencio
 		case 1:
