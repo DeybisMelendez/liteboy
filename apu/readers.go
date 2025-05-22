@@ -13,7 +13,10 @@ func (r *squareWaveReader) Read(p []byte) (int, error) {
 	c := r.channel
 	freqRatio := c.frequency / sampleRate
 
-	for i := 0; i < 5000; i += 2 {
+	// Cada frame estéreo son 4 bytes (2 canales x 2 bytes por muestra)
+	n := 5000
+
+	for i := 0; i < n; i += 4 {
 		var sample int16 = 0
 
 		if c.enabled && c.volume > 0 {
@@ -29,10 +32,12 @@ func (r *squareWaveReader) Read(p []byte) (int, error) {
 			}
 		}
 
-		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
+		// Escribir el mismo sample para canal izquierdo y derecho (estéreo)
+		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Left
+		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Right
 	}
 
-	return 5000, nil
+	return n, nil
 }
 
 type waveReader struct {
@@ -43,7 +48,9 @@ func (r *waveReader) Read(p []byte) (int, error) {
 	c := r.channel
 	freqRatio := c.frequency / sampleRate
 
-	for i := 0; i < 5000; i += 2 {
+	n := 5000
+
+	for i := 0; i < n; i += 4 {
 		var sample int16 = 0
 
 		if c.enabled {
@@ -56,15 +63,15 @@ func (r *waveReader) Read(p []byte) (int, error) {
 				waveSample = data & 0x0F
 			}
 
-			// Volume adjustment
 			if c.volumeShift == -1 {
 				waveSample = 0
 			} else {
 				waveSample >>= c.volumeShift
 			}
+
 			sample = int16((int(waveSample) - 8) * 4096)
 
-			// Advance wave position based on frequency
+			// Avanzar la posición de onda
 			c.phase += freqRatio
 			if c.phase >= 1.0 {
 				c.phase -= 1.0
@@ -72,10 +79,12 @@ func (r *waveReader) Read(p []byte) (int, error) {
 			}
 		}
 
-		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
+		// Escribir la muestra a ambos canales (L y R)
+		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Left
+		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Right
 	}
 
-	return 5000, nil
+	return n, nil
 }
 
 type noiseReader struct {
@@ -93,7 +102,9 @@ func (r *noiseReader) Read(p []byte) (int, error) {
 		div = divisors[c.divisorCode]
 	}
 
-	for i := 0; i < 5000; i += 2 {
+	n := 5000
+
+	for i := 0; i < n; i += 4 {
 		var sample int16 = 0
 
 		if c.enabled && c.volume > 0 {
@@ -126,8 +137,10 @@ func (r *noiseReader) Read(p []byte) (int, error) {
 			}
 		}
 
-		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
+		// Escribir la muestra a ambos canales
+		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Left
+		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Right
 	}
 
-	return 5000, nil
+	return n, nil
 }

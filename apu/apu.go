@@ -138,18 +138,7 @@ func (apu *APU) updateChannel1() {
 		}
 	}
 
-	// Envelope
-	if c.envelopeStep > 0 {
-		c.envelopeTimer--
-		if c.envelopeTimer <= 0 {
-			c.envelopeTimer = c.envelopeStep
-			newVolume := c.initialVolume + c.envelopeDir
-			if newVolume >= 0 && newVolume <= 15 {
-				c.initialVolume = newVolume
-				c.volume = float64(c.initialVolume) / 15.0
-			}
-		}
-	}
+	c.updateEnvelope()
 
 	// Sweep
 	if c.sweepTime > 0 {
@@ -170,13 +159,7 @@ func (apu *APU) updateChannel1() {
 		}
 	}
 
-	// Length timer
-	if c.lengthTimer > 0 {
-		c.lengthTimer--
-		if c.lengthTimer == 0 {
-			c.enabled = false
-		}
-	}
+	c.updateLengthTimer()
 }
 func (apu *APU) updateChannel2() {
 	c := apu.chan2
@@ -217,26 +200,9 @@ func (apu *APU) updateChannel2() {
 		}
 	}
 
-	// Envelope
-	if c.envelopeStep > 0 {
-		c.envelopeTimer--
-		if c.envelopeTimer <= 0 {
-			c.envelopeTimer = c.envelopeStep
-			newVolume := c.initialVolume + c.envelopeDir
-			if newVolume >= 0 && newVolume <= 15 {
-				c.initialVolume = newVolume
-				c.volume = float64(c.initialVolume) / 15.0
-			}
-		}
-	}
+	c.updateEnvelope()
 
-	// Length timer
-	if c.lengthTimer > 0 {
-		c.lengthTimer--
-		if c.lengthTimer == 0 {
-			c.enabled = false
-		}
-	}
+	c.updateLengthTimer()
 }
 func (apu *APU) updateChannel3() {
 	c := apu.chan3
@@ -287,13 +253,7 @@ func (apu *APU) updateChannel3() {
 	}
 	c.frequency = 131072.0 / float64(2048-freq)
 
-	// Length timer
-	if c.lengthTimer > 0 {
-		c.lengthTimer--
-		if c.lengthTimer == 0 {
-			c.enabled = false
-		}
-	}
+	c.updateLengthTimer()
 }
 
 func (apu *APU) updateChannel4() {
@@ -322,24 +282,6 @@ func (apu *APU) updateChannel4() {
 		c.divisorCode = int(nr43 & 0x07)
 	}
 
-	// Envelope
-	if c.envelopeStep > 0 {
-		c.envelopeTimer--
-		if c.envelopeTimer <= 0 {
-			c.envelopeTimer = c.envelopeStep
-			newVolume := c.initialVolume + c.envelopeDir
-			if newVolume >= 0 && newVolume <= 15 {
-				c.initialVolume = newVolume
-				c.volume = float64(c.initialVolume) / 15.0
-			}
-		}
-	}
-
-	// Length timer
-	if c.lengthTimer > 0 {
-		c.lengthTimer--
-		if c.lengthTimer == 0 {
-			c.enabled = false
-		}
-	}
+	c.updateEnvelope()
+	c.updateLengthTimer()
 }
