@@ -6,6 +6,7 @@ package cpu
 import (
 	"log"
 
+	"github.com/deybismelendez/liteboy/apu"
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/ppu"
 	"github.com/deybismelendez/liteboy/timer"
@@ -31,10 +32,11 @@ type CPU struct {
 	tCycles   int
 	bus       *bus.Bus
 	ppu       *ppu.PPU
+	apu       *apu.APU
 	timer     *timer.Timer
 }
 
-func NewCPU(bus *bus.Bus, timer *timer.Timer, ppu *ppu.PPU) *CPU {
+func NewCPU(bus *bus.Bus, timer *timer.Timer, ppu *ppu.PPU, apu *apu.APU) *CPU {
 	cpu := &CPU{}
 	cpu.a = 0x01
 	cpu.f = 0xB0
@@ -52,6 +54,7 @@ func NewCPU(bus *bus.Bus, timer *timer.Timer, ppu *ppu.PPU) *CPU {
 	cpu.enableIME = false
 	cpu.bus = bus
 	cpu.ppu = ppu
+	cpu.apu = apu
 	cpu.timer = timer
 	return cpu
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/deybismelendez/liteboy/apu"
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cartridge"
 	"github.com/deybismelendez/liteboy/cpu"
@@ -84,7 +85,8 @@ func runMooneyeTestROM(path string) bool {
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
 	gameTimer := timer.NewTimer(gameBus)
-	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
+	gameAPU := apu.NewAPU(gameBus)
+	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU, gameAPU)
 
 	for range 1_000_000 {
 		opcode := gameCPU.GetOpcode()

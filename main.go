@@ -32,9 +32,9 @@ func main() {
 	gameBus := bus.NewBus(cart)
 	gamePPU := ppu.NewPPU(gameBus)
 	gameTimer := timer.NewTimer(gameBus)
-	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU)
 	gameAPU := apu.NewAPU(gameBus)
-	game := NewLiteboy(gameCPU, gamePPU, gameBus, gameAPU)
+	gameCPU := cpu.NewCPU(gameBus, gameTimer, gamePPU, gameAPU)
+	game := NewLiteboy(gameCPU, gamePPU, gameBus)
 
 	// Configurar ventana y correr el loop de Ebiten
 	ebiten.SetWindowSize(ScreenWidth*Scale, ScreenHeight*Scale)

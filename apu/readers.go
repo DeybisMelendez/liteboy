@@ -34,7 +34,7 @@ func (r *squareWaveReader) Read(p []byte) (int, error) {
 
 		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
 	}
-	return len(p), nil
+	return len(p) / 6, nil
 }
 
 type waveReader struct {
@@ -87,7 +87,7 @@ func (r *waveReader) Read(p []byte) (int, error) {
 		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
 	}
 
-	return len(p), nil
+	return len(p) / 6, nil
 }
 
 type noiseReader struct {
@@ -145,60 +145,5 @@ func (r *noiseReader) Read(p []byte) (int, error) {
 		binary.LittleEndian.PutUint16(p[i:], uint16(sample))
 	}
 
-	return len(p), nil
-}
-func (r *squareWaveReader) advancePhase(seconds float64) {
-	if r.channel.enabled {
-		// Avanza la fase en base a frecuencia y tiempo transcurrido
-		r.channel.phase += r.channel.frequency * seconds
-		// La fase se mantiene en el rango [0,1)
-		r.channel.phase = math.Mod(r.channel.phase, 1.0)
-	}
-}
-
-func (r *waveReader) advancePhase(seconds float64) {
-	if r.channel.enabled {
-		// Avanza la fase
-		r.channel.phase += r.channel.frequency * seconds
-		if r.channel.phase >= 1.0 {
-			// Cuando completa un ciclo, avanza posición en onda
-			r.channel.phase -= 1.0
-			r.channel.wavePos = (r.channel.wavePos + 1) % 32
-		}
-	}
-}
-
-func (r *noiseReader) advancePhase(seconds float64) {
-	if r.channel.enabled {
-		// Para el ruido, el timer se basa en frecuencia derivada de divisor y clockShift
-		divisors := []int{8, 16, 32, 48, 64, 80, 96, 112}
-		div := divisors[r.channel.divisorCode]
-		if div == 0 {
-			div = 8
-		}
-		freq := float64(524288) / float64(div<<r.channel.clockShift)
-		if freq == 0 {
-			freq = 1
-		}
-
-		// Reducimos el timer según el tiempo que pasó
-		r.timer -= seconds * sampleRate
-
-		// Cuando timer llega a 0 o menos, avanzamos el LFSR
-		for r.timer <= 0 {
-			r.timer += sampleRate / freq
-
-			if r.lfsr == 0 {
-				r.lfsr = 0x7FFF
-			}
-			bit := (r.lfsr ^ (r.lfsr >> 1)) & 1
-			r.lfsr = (r.lfsr >> 1) | (bit << 14)
-
-			if r.channel.widthMode {
-				// modo 7 bits en LFSR
-				r.lfsr &= ^uint16(1 << 6)
-				r.lfsr |= uint16(bit << 6)
-			}
-		}
-	}
+	return len(p) / 6, nil
 }

@@ -43,5 +43,6 @@ func (cpu *CPU) tick() {
 	cpu.bus.TickDMA()
 	cpu.ppu.Step(4)
 	cpu.timer.Step(4)
+	cpu.apu.Step()
 	cpu.bus.Client = 0
 }

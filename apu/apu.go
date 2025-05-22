@@ -8,11 +8,7 @@ import (
 )
 
 const (
-	sampleRate      = 44100
-	frameRate       = 60
-	samplesPerFrame = sampleRate / frameRate
-	cpuClockSpeed   = 4194304.0 // Hz CPU real Game Boy
-
+	sampleRate = 44100
 )
 
 type APU struct {
@@ -44,19 +40,19 @@ func NewAPU(bus *bus.Bus) *APU {
 	reader3 := &waveReader{channel: ch3}
 	reader4 := &noiseReader{channel: ch4}
 
-	player1, err := audio.NewPlayer(ctx, reader1)
+	player1, err := ctx.NewPlayer(reader1)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 1:", err)
 	}
-	player2, err := audio.NewPlayer(ctx, reader2)
+	player2, err := ctx.NewPlayer(reader2)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 2:", err)
 	}
-	player3, err := audio.NewPlayer(ctx, reader3)
+	player3, err := ctx.NewPlayer(reader3)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 3:", err)
 	}
-	player4, err := audio.NewPlayer(ctx, reader4)
+	player4, err := ctx.NewPlayer(reader4)
 	if err != nil {
 		log.Fatal("error al crear audio player canal 4:", err)
 	}
@@ -84,25 +80,20 @@ func NewAPU(bus *bus.Bus) *APU {
 
 }
 
-func (apu *APU) Step(cyclesPassed int) {
+func (apu *APU) Step() {
 	// Convierte ciclos en segundos, asumiendo CPU clock
-	secondsPassed := float64(cyclesPassed) / cpuClockSpeed // cpuClockSpeed define la frecuencia CPU en Hz
+	//secondsPassed := float64(4) / cpuClockSpeed // cpuClockSpeed define la frecuencia CPU en Hz
 
 	apu.updateChannel1()
 	apu.updateChannel2()
 	apu.updateChannel3()
 	apu.updateChannel4()
-
-	// Avanza la fase de cada canal según tiempo pasado y frecuencia
-	apu.reader1.advancePhase(secondsPassed)
-	apu.reader2.advancePhase(secondsPassed)
-	apu.reader3.advancePhase(secondsPassed)
-	apu.reader4.advancePhase(secondsPassed)
 }
 
 func (apu *APU) updateChannel1() {
 	c := apu.chan1
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	nr10 := apu.bus.Read(0xFF10)
 	nr11 := apu.bus.Read(0xFF11)
 	nr12 := apu.bus.Read(0xFF12)
@@ -187,7 +178,8 @@ func (apu *APU) updateChannel1() {
 }
 func (apu *APU) updateChannel2() {
 	c := apu.chan2
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	nr21 := apu.bus.Read(0xFF16)
 	nr22 := apu.bus.Read(0xFF17)
 	nr23 := apu.bus.Read(0xFF18)
@@ -246,7 +238,8 @@ func (apu *APU) updateChannel2() {
 }
 func (apu *APU) updateChannel3() {
 	c := apu.chan3
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	nr30 := apu.bus.Read(0xFF1A)
 	nr31 := apu.bus.Read(0xFF1B)
 	nr32 := apu.bus.Read(0xFF1C)
@@ -294,7 +287,8 @@ func (apu *APU) updateChannel3() {
 }
 func (apu *APU) updateChannel4() {
 	c := apu.chan4
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	nr41 := apu.bus.Read(0xFF20)
 	nr42 := apu.bus.Read(0xFF21)
 	nr43 := apu.bus.Read(0xFF22)

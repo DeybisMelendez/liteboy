@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/deybismelendez/liteboy/apu"
 	"github.com/deybismelendez/liteboy/bus"
 	"github.com/deybismelendez/liteboy/cpu"
 	"github.com/deybismelendez/liteboy/ppu"
@@ -20,7 +19,6 @@ const (
 type Liteboy struct {
 	cpu         *cpu.CPU
 	ppu         *ppu.PPU
-	apu         *apu.APU
 	bus         *bus.Bus
 	cycles      int
 	targetTPS   int
@@ -29,11 +27,10 @@ type Liteboy struct {
 	image       *ebiten.Image
 }
 
-func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus, apu *apu.APU) *Liteboy {
+func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus) *Liteboy {
 	return &Liteboy{
 		cpu:         cpu,
 		ppu:         ppu,
-		apu:         apu,
 		bus:         bus,
 		image:       ebiten.NewImage(ScreenWidth, ScreenHeight),
 		tpsMode:     []int{70224, 70224 * 2, 70224 * 3, 70224 * 4},
@@ -42,15 +39,13 @@ func NewLiteboy(cpu *cpu.CPU, ppu *ppu.PPU, bus *bus.Bus, apu *apu.APU) *Liteboy
 }
 
 func (liteboy *Liteboy) Update() error {
-	cyclesBefore := liteboy.cycles
 	for liteboy.cycles < liteboy.tpsMode[liteboy.targetTPS] {
 		liteboy.cycles += liteboy.cpu.Step()
+		// Pasamos ciclos reales transcurridos
 		liteboy.handleGamepad()
 	}
-	cyclesPassed := liteboy.cycles - cyclesBefore
 
 	liteboy.handleKeyboard()
-	liteboy.apu.Step(cyclesPassed) // Pasamos ciclos reales transcurridos
 
 	// Renderizado
 	liteboy.image.WritePixels(liteboy.ppu.Framebuffer)

@@ -1,6 +1,9 @@
 package apu
 
+import "sync"
+
 type SquareChannel struct {
+	mu            sync.Mutex
 	frequency     float64
 	volume        float64
 	dutyRatio     float64
@@ -19,6 +22,7 @@ type SquareChannel struct {
 	phase         float64
 }
 type WaveChannel struct {
+	mu          sync.Mutex
 	enabled     bool
 	triggered   bool
 	lengthTimer int
@@ -30,6 +34,7 @@ type WaveChannel struct {
 }
 
 type NoiseChannel struct {
+	mu            sync.Mutex
 	enabled       bool
 	triggered     bool
 	lengthTimer   int
