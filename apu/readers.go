@@ -99,6 +99,7 @@ type noiseReader struct {
 func (r *noiseReader) Read(p []byte) (int, error) {
 	c := r.channel
 
+	// Divisores reales según Game Boy hardware
 	divisors := []int{8, 16, 32, 48, 64, 80, 96, 112}
 	div := 8
 	if c.divisorCode >= 0 && c.divisorCode < len(divisors) {
@@ -111,8 +112,8 @@ func (r *noiseReader) Read(p []byte) (int, error) {
 		var sample int16 = 0
 
 		if c.enabled && c.volume > 0 {
-			freq := 524288.0 / float64(div<<c.clockShift)
-			if freq <= 0 {
+			freq := 524288.0 / float64(div<<uint(c.clockShift))
+			if freq < 1 {
 				freq = 1
 			}
 
@@ -124,23 +125,25 @@ func (r *noiseReader) Read(p []byte) (int, error) {
 					r.lfsr = 0x7FFF
 				}
 
+				// LFSR feedback calculation
 				bit := (r.lfsr ^ (r.lfsr >> 1)) & 1
 				r.lfsr = (r.lfsr >> 1) | (bit << 14)
 
 				if c.widthMode {
+					// 7-bit mode: bit 6 also updated
 					r.lfsr &= ^uint16(1 << 6)
-					r.lfsr |= uint16(bit << 6)
+					r.lfsr |= (bit << 6)
 				}
 			}
 
 			if r.lfsr&1 == 0 {
-				sample = int16(float64(c.volume) * 32767)
+				sample = int16(c.volume * 32767 / 15) // normalizado
 			} else {
-				sample = -int16(float64(c.volume) * 32767)
+				sample = -int16(c.volume * 32767 / 15)
 			}
 		}
 
-		// Escribir la muestra a ambos canales
+		// Estéreo: misma muestra para L y R
 		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Left
 		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Right
 	}

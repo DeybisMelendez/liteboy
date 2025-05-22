@@ -84,10 +84,10 @@ func NewAPU(bus *bus.Bus) *APU {
 func (apu *APU) Step() {
 	if apu.ticks >= 24 {
 		apu.ticks -= 24
-		apu.updateChannel1()
-		apu.updateChannel2()
+		//apu.updateChannel1()
+		//apu.updateChannel2()
 		apu.updateChannel3()
-		//apu.updateChannel4()
+		apu.updateChannel4()
 	}
 	apu.ticks++
 }
@@ -259,6 +259,7 @@ func (apu *APU) updateChannel4() {
 	c := apu.chan4
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	nr41 := apu.bus.Read(0xFF20)
 	nr42 := apu.bus.Read(0xFF21)
 	nr43 := apu.bus.Read(0xFF22)
@@ -267,15 +268,18 @@ func (apu *APU) updateChannel4() {
 	if nr44&0x80 != 0 {
 		c.enabled = true
 		c.triggered = true
+
 		c.lengthTimer = 64 - int(nr41&0x3F)
+
 		c.initialVolume = int(nr42 >> 4)
-		c.volume = float64(c.initialVolume) / 15.0
+		c.volume = float64(c.initialVolume)
 		c.envelopeDir = 1
 		if nr42&0x08 == 0 {
 			c.envelopeDir = -1
 		}
 		c.envelopeStep = int(nr42 & 0x07)
 		c.envelopeTimer = c.envelopeStep
+
 		c.clockShift = int(nr43 >> 4)
 		c.widthMode = (nr43 & 0x08) != 0
 		c.divisorCode = int(nr43 & 0x07)
