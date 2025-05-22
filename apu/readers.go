@@ -49,6 +49,7 @@ func (r *waveReader) Read(p []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	freqRatio := c.frequency / sampleRate
 	n := 5000
 
 	for i := 0; i < n; i += 4 {
@@ -58,36 +59,32 @@ func (r *waveReader) Read(p []byte) (int, error) {
 			index := c.wavePos % 32
 			data := c.waveRAM[index/2]
 			var waveSample byte
-
 			if index%2 == 0 {
 				waveSample = (data >> 4) & 0x0F
 			} else {
 				waveSample = data & 0x0F
 			}
 
-			// Ajustar volumen
 			if c.volumeShift == -1 {
 				waveSample = 0
 			} else {
 				waveSample >>= c.volumeShift
 			}
 
-			//sample = int16((int(waveSample) - 8) * 4096)
+			// Escalar a [-32767, 32767] sin distorsión
 			waveValue := int32(waveSample)
 			sample = int16((waveValue * 2 * 32767 / 15) - 32767)
 
-			// Avanzar fase
-			c.phase += c.frequency / sampleRate
+			c.phase += freqRatio
 			if c.phase >= 1.0 {
-				steps := int(c.phase)
-				c.phase -= float64(steps)
-				c.wavePos = (c.wavePos + steps) % 32
+				c.phase -= 1.0
+				c.wavePos = (c.wavePos + 1) % 32
 			}
 		}
 
-		// Escribir muestra en estéreo
-		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Canal Izquierdo
-		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Canal Derecho
+		// Salida estéreo: mismo valor para L y R
+		binary.LittleEndian.PutUint16(p[i:], uint16(sample))   // Left
+		binary.LittleEndian.PutUint16(p[i+2:], uint16(sample)) // Right
 	}
 
 	return n, nil

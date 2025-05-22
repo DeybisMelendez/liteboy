@@ -215,13 +215,11 @@ func (apu *APU) updateChannel3() {
 	nr33 := apu.bus.Read(0xFF1D)
 	nr34 := apu.bus.Read(0xFF1E)
 
-	// Channel enabled
 	if nr30&0x80 == 0 {
 		c.enabled = false
 		return
 	}
 
-	// Trigger check
 	if nr34&0x80 != 0 {
 		c.enabled = true
 		c.triggered = true
@@ -229,14 +227,14 @@ func (apu *APU) updateChannel3() {
 		c.wavePos = 1
 		c.phase = 0.0
 
-		// Load wave RAM ONCE (optional: you could load only on CPU writes)
+		// Cargar wave RAM
 		for i := 0; i < 16; i++ {
 			c.waveRAM[i] = apu.bus.Read(0xFF30 + uint16(i))
 		}
 
 		switch (nr32 >> 5) & 0x03 {
 		case 0:
-			c.volumeShift = -1 // Special case: mute
+			c.volumeShift = -1 // Silencio
 		case 1:
 			c.volumeShift = 0 // 100%
 		case 2:
@@ -246,7 +244,7 @@ func (apu *APU) updateChannel3() {
 		}
 	}
 
-	// Update frequency from current NR33/NR34
+	// Frecuencia: 131072 / (2048 - freq)
 	freq := uint16(nr33) | (uint16(nr34&0x07) << 8)
 	if freq >= 2048 {
 		freq = 2047
