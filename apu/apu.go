@@ -86,7 +86,7 @@ func (apu *APU) Step() {
 		apu.ticks -= 24
 		apu.updateChannel1()
 		apu.updateChannel2()
-		//apu.updateChannel3()
+		apu.updateChannel3()
 		//apu.updateChannel4()
 	}
 	apu.ticks++
@@ -226,7 +226,7 @@ func (apu *APU) updateChannel3() {
 		c.enabled = true
 		c.triggered = true
 		c.lengthTimer = 256 - int(nr31)
-		c.wavePos = 0
+		c.wavePos = 1
 		c.phase = 0.0
 
 		// Load wave RAM ONCE (optional: you could load only on CPU writes)
@@ -251,7 +251,8 @@ func (apu *APU) updateChannel3() {
 	if freq >= 2048 {
 		freq = 2047
 	}
-	c.frequency = 131072.0 / float64(2048-freq)
+	c.frequency = 2097152.0 / (2.0 * float64(2048-freq))
+	//c.frequency = 131072.0 / float64(2048-freq)
 
 	c.updateLengthTimer()
 }
