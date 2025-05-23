@@ -32,10 +32,10 @@ func (r *Reader) Read(p []byte) (int, error) {
 
 		// Convertir a uint16 para LittleEndian
 		// int16 a uint16 requiere máscara de bits
-		sample := uint16(int16(mixed))
+		sample := int(mixed)
 		// Escribir muestra estéreo (izquierda y derecha igual)
-		binary.LittleEndian.PutUint16(p[i:], sample*uint16(r.leftVolume))    // Left
-		binary.LittleEndian.PutUint16(p[i+2:], sample*uint16(r.rightVolume)) // Right
+		binary.LittleEndian.PutUint16(p[i:], uint16((sample*int(r.leftVolume*10000))/10000))    // Left
+		binary.LittleEndian.PutUint16(p[i+2:], uint16((sample*int(r.rightVolume*10000))/10000)) // Right
 	}
 	return BufferSize, nil
 }
