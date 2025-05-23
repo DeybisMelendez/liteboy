@@ -19,6 +19,7 @@ type APU struct {
 	chan3  *WaveChannel
 	chan4  *NoiseChannel
 	player *audio.Player
+	reader *Reader
 }
 
 func NewAPU(bus *bus.Bus) *APU {
@@ -53,6 +54,7 @@ func NewAPU(bus *bus.Bus) *APU {
 		chan2:  ch2,
 		chan3:  ch3,
 		chan4:  ch4,
+		reader: reader,
 		player: player,
 	}
 
@@ -64,6 +66,25 @@ func (apu *APU) Step() {
 	apu.updateChannel2()
 	apu.updateChannel3()
 	//apu.updateChannel4()
+	// Actualiza bits 0-3 de NR52 según el estado de cada canal
+	status := byte(0)
+	if apu.chan1.enabled {
+		status |= 0x01
+	}
+	if apu.chan2.enabled {
+		status |= 0x02
+	}
+	if apu.chan3.enabled {
+		status |= 0x04
+	}
+	if apu.chan4.enabled {
+		status |= 0x08
+	}
+	apu.bus.Write(0xFF26, 0x80|status) // Bit 7 siempre en 1 si APU está encendido
+	nr50 := apu.bus.Read(0xFF24)
+
+	apu.reader.leftVolume = float64((nr50>>4)&0x07) / 7.0
+	apu.reader.rightVolume = float64(nr50&0x07) / 7.0
 }
 
 func (apu *APU) updateChannel1() {

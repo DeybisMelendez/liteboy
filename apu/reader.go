@@ -2,13 +2,15 @@ package apu
 
 import "encoding/binary"
 
-const BufferSize = 5000
+const BufferSize = 2500
 
 type Reader struct {
-	ch1 *SquareChannel
-	ch2 *SquareChannel
-	ch3 *WaveChannel
-	ch4 *NoiseChannel
+	ch1         *SquareChannel
+	ch2         *SquareChannel
+	ch3         *WaveChannel
+	ch4         *NoiseChannel
+	leftVolume  float64
+	rightVolume float64
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
@@ -31,10 +33,9 @@ func (r *Reader) Read(p []byte) (int, error) {
 		// Convertir a uint16 para LittleEndian
 		// int16 a uint16 requiere máscara de bits
 		sample := uint16(int16(mixed))
-
 		// Escribir muestra estéreo (izquierda y derecha igual)
-		binary.LittleEndian.PutUint16(p[i:], sample)   // Left
-		binary.LittleEndian.PutUint16(p[i+2:], sample) // Right
+		binary.LittleEndian.PutUint16(p[i:], sample*uint16(r.leftVolume))    // Left
+		binary.LittleEndian.PutUint16(p[i+2:], sample*uint16(r.rightVolume)) // Right
 	}
 	return BufferSize, nil
 }
