@@ -2,7 +2,7 @@ package apu
 
 import "encoding/binary"
 
-const BufferSize = 2500
+const BufferSize = 620
 
 type Reader struct {
 	ch1         *SquareChannel

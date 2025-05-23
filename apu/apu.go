@@ -65,7 +65,7 @@ func (apu *APU) Step() {
 	apu.updateChannel1()
 	apu.updateChannel2()
 	apu.updateChannel3()
-	//apu.updateChannel4()
+	apu.updateChannel4()
 	// Actualiza bits 0-3 de NR52 según el estado de cada canal
 	status := byte(0)
 	if apu.chan1.enabled {
@@ -99,28 +99,40 @@ func (apu *APU) updateChannel1() {
 
 	// Trigger
 	if nr14&0x80 != 0 {
+		//apu.bus.Write(0xFF14, nr14&^0x80)
 		c.enabled = true
 		c.triggered = true
 		c.lengthTimer = 64 - int(nr11&0x3F)
-		c.initialVolume = int(nr12 >> 4)
-		c.volume = float64(c.initialVolume) / 15.0
-		c.envelopeDir = 1
-		if nr12&0x08 == 0 {
+
+		// Configura el volumen inicial del envelope
+		c.initialVolume = int((nr12 >> 4) & 0x0F) // bits 7-4
+		c.currentVolume = c.initialVolume         // inicializa volumen actual con el inicial
+		c.volume = float64(c.currentVolume) / 15.0
+
+		// Dirección del envelope: bit 3 (0=decrementa, 1=incrementa)
+		if nr12&0x08 != 0 {
+			c.envelopeDir = +1
+		} else {
 			c.envelopeDir = -1
 		}
+		// Tiempo del envelope: bits 2-0 (0-7)
 		c.envelopeStep = int(nr12 & 0x07)
+
+		// Si envelopeStep es 0, envelopeTimer no cuenta
 		c.envelopeTimer = c.envelopeStep
+
+		// Sweep setup
 		c.sweepTime = int((nr10 >> 4) & 0x07)
-		c.sweepDir = 1
 		if nr10&0x08 != 0 {
 			c.sweepDir = -1
+		} else {
+			c.sweepDir = +1
 		}
 		c.sweepShift = int(nr10 & 0x07)
 		c.shadowFreq = uint16(nr13) | (uint16(nr14&0x07) << 8)
-
 		c.frequency = 131072.0 / float64(2048-c.shadowFreq)
 
-		// Duty
+		// Duty cycle
 		switch (nr11 >> 6) & 0x03 {
 		case 0:
 			c.dutyRatio = 0.125
@@ -133,9 +145,10 @@ func (apu *APU) updateChannel1() {
 		}
 	}
 
+	// Actualiza envelope
 	c.updateEnvelope()
 
-	// Sweep
+	// Sweep (ya tienes bien implementado, lo dejamos igual)
 	if c.sweepTime > 0 {
 		c.sweepCounter++
 		if c.sweepCounter >= c.sweepTime {
@@ -158,6 +171,7 @@ func (apu *APU) updateChannel1() {
 
 	c.updateLengthTimer()
 }
+
 func (apu *APU) updateChannel2() {
 	c := apu.chan2
 	c.mu.Lock()

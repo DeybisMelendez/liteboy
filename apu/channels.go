@@ -16,6 +16,7 @@ type Channel struct {
 	envelopeDir   int
 	initialVolume int
 	volume        float64
+	currentVolume int
 }
 
 func (c *Channel) updateLengthTimer() {
@@ -28,15 +29,22 @@ func (c *Channel) updateLengthTimer() {
 }
 
 func (c *Channel) updateEnvelope() {
-	if c.envelopeStep > 0 && c.envelopeTimer > 0 {
+	if c.envelopeStep == 0 {
+		// Si envelopeStep es 0, el envelope no hace nada
+		return
+	}
+	if c.envelopeTimer > 0 {
 		c.envelopeTimer--
-		if c.envelopeTimer <= 0 {
-			c.envelopeTimer = c.envelopeStep
-			newVolume := c.initialVolume + c.envelopeDir
-			if newVolume >= 0 && newVolume <= 15 {
-				c.initialVolume = newVolume
-				c.volume = float64(c.initialVolume) / 15.0
-			}
+	}
+	if c.envelopeTimer == 0 {
+		c.envelopeTimer = c.envelopeStep
+		newVolume := c.currentVolume + c.envelopeDir
+		if newVolume >= 0 && newVolume <= 15 {
+			c.currentVolume = newVolume
+			c.volume = float64(c.currentVolume) / 15.0
+		} else {
+			// Si se pasa del rango, el envelope deja de cambiar (comportamiento real)
+			// En hardware GB el envelope deja de cambiar al llegar a 0 o 15
 		}
 	}
 }
