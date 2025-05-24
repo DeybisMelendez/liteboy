@@ -28,7 +28,7 @@ func NewAPU(bus *bus.Bus) *APU {
 	ch1 := &SquareChannel{}
 	ch2 := &SquareChannel{}
 	ch3 := &WaveChannel{bus: bus}
-	ch4 := &NoiseChannel{}
+	ch4 := &NoiseChannel{lfsr: 0x7FFF}
 	reader := &Reader{ch1: ch1, ch2: ch2, ch3: ch3, ch4: ch4}
 
 	player, err := ctx.NewPlayer(reader)
@@ -65,7 +65,7 @@ func (apu *APU) Step() {
 	apu.updateChannel1()
 	apu.updateChannel2()
 	apu.updateChannel3()
-	apu.updateChannel4()
+	//apu.updateChannel4()
 	// Actualiza bits 0-3 de NR52 según el estado de cada canal
 	status := byte(0)
 	if apu.chan1.enabled {
@@ -264,7 +264,6 @@ func (apu *APU) updateChannel3() {
 	}
 }
 
-// updateChannel4 debe inicializar y disparar el canal de ruido
 func (apu *APU) updateChannel4() {
 	c := apu.chan4
 	c.mu.Lock()
@@ -276,16 +275,16 @@ func (apu *APU) updateChannel4() {
 	nr44 := apu.bus.Read(0xFF23)
 
 	// Trigger (bit 7 de NR44)
+
 	if nr44&0x80 != 0 {
 		c.enabled = true
-		c.triggered = true
-
-		// Length timer (si NR44 bit 6 = 1, se usa en step())
 		c.lengthTimer = 64 - int(nr41&0x3F)
 
-		// Envelope (NR42)
-		c.initialVolume = int(nr42 >> 4)
-		c.volume = float64(c.initialVolume) / 15.0
+		// Configurar volumen y envolvente
+		c.initialVolume = int((nr42 >> 4) & 0x0F)
+
+		c.currentVolume = c.initialVolume
+		c.volume = float64(c.currentVolume) / 15.0
 		c.envelopeDir = 1
 		if nr42&0x08 == 0 {
 			c.envelopeDir = -1
@@ -293,26 +292,21 @@ func (apu *APU) updateChannel4() {
 		c.envelopeStep = int(nr42 & 0x07)
 		c.envelopeTimer = c.envelopeStep
 
-		// Parámetros de ruido (NR43)
-		c.clockShift = int(nr43 >> 4)
-		c.widthMode = (nr43 & 0x08) != 0
+		// Parámetros del ruido (NR43)
 		c.divisorCode = int(nr43 & 0x07)
+		c.shift = int((nr43 >> 4) & 0x0F)
+		c.widthMode = int((nr43 >> 3) & 0x01)
 
-		// Reiniciar LFSR
-		c.lfsr = 0x7FFF // 15 bits todos a 1
-		if c.widthMode {
-			c.lfsr = 0x7F // 7 bits todos a 1
-		}
-
-		// Reset del timer
-		c.timer = 0
+		// Inicializar LFSR y fase
+		c.lfsr = 0x7FFF // Estado inicial según documentación
+		c.phase = 0.0
 	}
 
-	// Length timer automático si NR44 bit 6 = 1
+	// Actualizar envolvente
+	c.updateEnvelope()
+
+	// Actualizar temporizador de longitud si está habilitado
 	if nr44&0x40 != 0 {
 		c.updateLengthTimer()
 	}
-
-	// Envelope
-	c.updateEnvelope()
 }

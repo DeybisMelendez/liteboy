@@ -7,3 +7,31 @@ LiteBoy es un emulador ligero de la consola Nintendo Game Boy, desarrollado usan
 
 - Go 1.24
 - Ebitengine 2.8
+
+## Uso
+
+Ejecutar en raiz del proyecto:
+
+go run . [path-rom]
+
+# Que hace bien el emulador
+
+- Ejecuta decentemente todas las instrucciones de CPU con timings correctos
+- Realiza un renderizado de imagen decente pero sin timings exactos
+- Genera audio de los canales 1, 2 y 3 decentemente
+- Lee cartuchos de tipo ONLY ROM y MBC1
+- Pasa todos los tests de Blargg excepto los que prueban bugs
+- Pasa casi todos los test de Mooneye excepto los de PPU
+- Pasa el test de dmg-acid2
+
+## TODO
+
+- APU:
+    - Falta generar canal 4 (ruido) correctamente
+    - Falta mejorar los canales de audio
+- PPU:
+    - Falta mejorar timings
+- Cartuchos:
+    - Agregar soporte a mas tipos de cartuchos
+- Otros:
+    - Refactorizar y optimizar proyecto

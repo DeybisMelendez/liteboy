@@ -7,6 +7,8 @@ import (
 	"github.com/deybismelendez/liteboy/bus"
 )
 
+var noiseDivisors = [8]float64{8, 16, 32, 48, 64, 80, 96, 112}
+
 type Channel struct {
 	enabled       bool
 	frequency     float64
@@ -127,12 +129,11 @@ func (c *WaveChannel) GetSample() int {
 type NoiseChannel struct {
 	Channel
 	mu          sync.Mutex
-	triggered   bool
-	clockShift  int
-	widthMode   bool
-	divisorCode int
 	lfsr        uint16
-	timer       float64
+	phase       float64
+	divisorCode int
+	shift       int
+	widthMode   int
 }
 
 // GetSample genera una muestra de ruido PCM de 16 bits [-32767, +32767].
@@ -140,44 +141,33 @@ func (c *NoiseChannel) GetSample() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Si el canal no está encendido o el volumen es cero, no hay salida.
 	if !c.enabled || c.volume == 0 {
 		return 0
 	}
 
-	// Calcular cuántas muestras deben transcurrir entre actualizaciones del LFSR:
-	// periodCPU = divisor * 2^(clockShift+1) ciclos de CPU (4.194304 MHz)
-	// samplesPerStep = periodCPU / 4194304 * sampleRate
-	div := c.divisorCode
-	if div == 0 {
-		div = 8
-	} else {
-		div *= 16
-	}
-	periodCPU := float64(div) * math.Pow(2, float64(c.clockShift+1))
-	samplesPerStep := periodCPU * sampleRate / 4194304.0
+	// Tabla de divisores según la documentación
+	divisorTable := [8]float64{0.5, 1, 2, 3, 4, 5, 6, 7}
+	divisor := divisorTable[c.divisorCode]
+	frequency := 262144.0 / (divisor * math.Pow(2, float64(c.shift)))
 
-	// Avanzar el timer y actualizar LFSR cuando toque
-	c.timer -= 1.0
-	if c.timer <= 0 {
-		c.timer += samplesPerStep
+	phaseIncrement := frequency / float64(sampleRate)
 
-		// Retroalimentación del LFSR: bit0 xor bit1
-		bit0 := c.lfsr & 1
-		bit1 := (c.lfsr >> 1) & 1
-		feedback := bit0 ^ bit1
-
-		// Desplazar y poner el nuevo bit en posición 14
-		c.lfsr = (c.lfsr >> 1) | (feedback << 14)
-
-		// Si está en modo 7-bit, también actualizar bit6 y enmascarar resto
-		if c.widthMode {
-			c.lfsr = (c.lfsr &^ (1 << 6)) | (feedback << 6)
-			c.lfsr &= 0x7F // solo 7 bits efectivos
+	// Actualizar fase y clock del LFSR
+	c.phase += phaseIncrement
+	numClocks := int(c.phase)
+	if numClocks > 0 {
+		c.phase -= float64(numClocks)
+		for i := 0; i < numClocks; i++ {
+			feedback := (c.lfsr & 1) ^ ((c.lfsr >> 1) & 1)
+			c.lfsr = (c.lfsr >> 1) | (feedback << 14)
+			if c.widthMode == 1 {
+				// Modo 7 bits: establecer bit 6
+				c.lfsr = (c.lfsr & 0xFFBF) | (feedback << 6)
+			}
 		}
 	}
 
-	// Extraer el bit 0 como salida de nivel
+	// Generar muestra: bit 0 invertido, escalado por volumen
 	var sample int
 	if (c.lfsr & 1) == 0 {
 		sample = int(c.volume * 32767)
