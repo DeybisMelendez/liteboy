@@ -11,6 +11,8 @@ const (
 	sampleRate = 44100
 )
 
+var ctx *audio.Context = audio.NewContext(sampleRate)
+
 type APU struct {
 	audio  *audio.Context
 	bus    *bus.Bus
@@ -23,8 +25,6 @@ type APU struct {
 }
 
 func NewAPU(bus *bus.Bus) *APU {
-	ctx := audio.NewContext(sampleRate)
-
 	ch1 := &SquareChannel{}
 	ch2 := &SquareChannel{}
 	ch3 := &WaveChannel{bus: bus}
