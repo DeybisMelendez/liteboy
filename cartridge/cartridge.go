@@ -54,10 +54,32 @@ func NewCartridge(path string) *Cartridge {
 	romType := rom[0x0147]
 	switch romType {
 	case 0x00:
-		cart.Memory = &romOnly{ROM: romBanks}
+		cart.Memory = &romOnly{ROM: romBanks} // ROM ONLY
+
 	case 0x01, 0x02, 0x03:
-		cart.Memory = &mbc1{ROM: romBanks}
-	// Aquí podrías agregar MBC2, MBC3, MBC5...
+		cart.Memory = &mbc1{ROM: romBanks} // MBC1 (+RAM +BATTERY)
+
+	case 0x05, 0x06:
+		cart.Memory = &mbc2{ROM: romBanks} // MBC2 (+BATTERY)
+
+	case 0x08, 0x09:
+		cart.Memory = &romOnly{ROM: romBanks} // ROM ONLY + RAM (+BATTERY) - No MBC
+
+	case 0x0B, 0x0C, 0x0D:
+		log.Fatalf("Tipo de cartucho MMM01 no soportado: 0x%02X\n", romType)
+
+	case 0x0F, 0x10, 0x11, 0x12, 0x13:
+		cart.Memory = &mbc3{ROM: romBanks} // MBC3 + RTC (+RAM +BATTERY)
+
+	case 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E:
+		cart.Memory = &mbc5{ROM: romBanks} // MBC5 (+RAM +BATTERY +RUMBLE)
+
+	case 0x20:
+		log.Fatalf("Tipo de cartucho MBC6 no soportado: 0x%02X\n", romType)
+
+	case 0x22:
+		cart.Memory = &mbc7{ROM: romBanks} // MBC7 (Tilt sensor + EEPROM)
+
 	default:
 		log.Fatalf("Tipo de cartucho no soportado: 0x%02X. Se usará ROMOnly como fallback.\n", romType)
 	}
