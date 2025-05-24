@@ -14,12 +14,16 @@ Ejecutar en raiz del proyecto:
 
 go run . [path-rom]
 
+Agrega --info para visualizar información de la rom.
+
+Para ejecutar tests requiere descargar los test rom de Blargg y Mooneye en la carpeta roms/blargg y roms/mooneye respectivamente. Luego puedes proceder a ejecutar go test.
+
 # Que hace bien el emulador
 
 - Ejecuta decentemente todas las instrucciones de CPU con timings correctos
 - Realiza un renderizado de imagen decente pero sin timings exactos
 - Genera audio de los canales 1, 2 y 3 decentemente
-- Lee cartuchos de tipo ONLY ROM y MBC1
+- Lee cartuchos de tipo ROM ONLY, MBC1, MBC2, MBC3, MBC5, MBC7 (algunos no están completos)
 - Pasa todos los tests de Blargg excepto los que prueban bugs
 - Pasa casi todos los test de Mooneye excepto los de PPU
 - Pasa el test de dmg-acid2
@@ -33,5 +37,10 @@ go run . [path-rom]
     - Falta mejorar timings
 - Cartuchos:
     - Agregar soporte a mas tipos de cartuchos
+    - Mejorar soporte de algunos tipos de cartuchos
 - Otros:
     - Refactorizar y optimizar proyecto
+
+## ¡Se busca contribución!
+
+Si te gusta el proyecto, puedes contribuir en el desarrollo enviando pull request.
